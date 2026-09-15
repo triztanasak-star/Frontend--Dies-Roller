@@ -1,0 +1,105 @@
+:root {
+  --font-primary: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: var(--font-primary);
+
+  --color-primary: #4f6ef7;
+  --color-primary-dark: #3b52d6;
+  --color-primary-light: #e8ecff;
+  --color-bg: #eef1fb;
+  --color-surface: #ffffff;
+  --color-text: #1e2233;
+  --color-muted: #6b7280;
+  --color-accent: #16a34a;
+  --color-danger: #e11d48;
+  --color-warning: #f59e0b;
+
+  --color-primary-rgb: 79, 110, 247;
+  --color-accent-rgb: 22, 163, 74;
+  --color-danger-rgb: 225, 29, 72;
+  --color-warning-rgb: 245, 158, 11;
+
+  /* Sidebar - luon dark, khong doi theo light/dark mode noi dung */
+  --sidebar-bg-start: #0b1030;
+  --sidebar-bg-end: #171f52;
+  --sidebar-text: #c9cee8;
+  --sidebar-text-active: #ffffff;
+  --shell-border: #f5c2d8;
+
+  /* Trang thai / uu tien badge */
+  --status-good: #16a34a;
+  --status-good-bg: #e9f8ef;
+  --status-warn: #f59e0b;
+  --status-warn-bg: #fef3e2;
+  --status-bad: #e11d48;
+  --status-bad-bg: #fde8ec;
+
+  --priority-high-bg: #fde3ec;
+  --priority-high-text: #d6336c;
+  --priority-medium-bg: #fef3e2;
+  --priority-medium-text: #b45309;
+  --priority-low-bg: #e6effe;
+  --priority-low-text: #3b5bdb;
+
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 72px;
+  --sidebar-width-mobile: 260px;
+  --navbar-height: 60px;
+
+  --container-sm: 720px;
+  --container-md: 960px;
+  --container-lg: 1200px;
+  --container-main: 1600px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-full: 999px;
+
+  --shadow-soft: 0 4px 12px rgba(10, 10, 10, 0.06);
+  --shadow-medium: 0 8px 24px rgba(10, 10, 10, 0.10);
+  --shadow-sidebar: 4px 0 24px rgba(11, 16, 48, 0.25);
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  --bs-primary: var(--color-primary);
+  --bs-primary-rgb: 79, 110, 247;
+  --bs-body-color: var(--color-text);
+  --bs-body-bg: var(--color-bg);
+  --bs-border-color: #d8deef;
+  --bs-border-radius: var(--radius-md);
+}
+
+html[data-theme='dark'] {
+  --color-primary: #60a5fa;
+  --color-primary-dark: #3b82f6;
+  --color-primary-light: #1e293b;
+  
+  /* Đổi màu nền trang thành màu xám than (Charcoal) sang trọng, không bị tối quá mức */
+  --color-bg: #0f172a;         
+  
+  /* Đổi màu nền của Card/Bảng thành màu sáng hơn hẳn nền chính để tách biệt rõ khối */
+  --color-surface: #1e293b;    
+  
+  /* Màu chữ trắng sáng tinh khiết giúp đọc cực kỳ rõ nét */
+  --color-text: #f8fafc;       
+  --color-muted: #94a3b8;      
+  
+  --color-accent: #34d399;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+
+  --color-primary-rgb: 96, 165, 250;
+  --color-accent-rgb: 52, 211, 153;
+  --color-danger-rgb: 248, 113, 113;
+  --color-warning-rgb: 251, 191, 36;
+
+  --bs-primary: #60a5fa;
+  --bs-primary-rgb: 96, 165, 250;
+  --bs-body-color: #f8fafc;
+  --bs-body-bg: #0f172a;
+  
+  /* Thêm màu viền rõ ràng cho các ô input, bảng, card */
+  --bs-border-color: #334155;    
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
