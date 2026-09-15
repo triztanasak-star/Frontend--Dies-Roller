@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { FiGrid, FiFolder, FiCheckSquare, FiUsers, FiPieChart, FiLogOut, FiSun, FiMoon } from 'react-icons/fi';
+import { FiGrid, FiCheckSquare, FiUsers, FiPieChart, FiLogOut, FiSun, FiMoon } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logoDigital.JPG.jpg';

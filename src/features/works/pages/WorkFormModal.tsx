@@ -59,7 +59,7 @@ const FACTORY_OPTIONS = [
   'Nhà máy Xuân Mai',
 ];
 
-const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ projects, users, onSubmit }, ref) => {
+const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isAssignMode, setIsAssignMode] = useState(false);

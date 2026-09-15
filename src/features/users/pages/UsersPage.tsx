@@ -35,7 +35,7 @@ export default function UsersPage() {
     const newRole = editingRoles[userId];
     if (!newRole) return;
     
-    updateUser.mutate({ id: userId, payload: { role: newRole } }, {
+    updateUser.mutate({ id: Number(userId), payload: { role: newRole } }, {
       onSuccess: () => {
         // Xóa khỏi trạng thái tạm sau khi lưu thành công
         setEditingRoles((prev) => {
@@ -113,7 +113,7 @@ export default function UsersPage() {
                           className="form-select form-select-sm"
                           style={{ width: '130px' }}
                           value={currentSelectedRole}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
+                          onChange={(e) => handleRoleChange(String(u.id), e.target.value as Role)}
                         >
                           <option value="user">User</option>
                           <option value="manager">Manager</option>
@@ -125,7 +125,7 @@ export default function UsersPage() {
                           <button
                             type="button"
                             className="btn btn-sm btn-success px-2 py-1"
-                            onClick={() => handleSaveRole(u.id)}
+                            onClick={() => handleSaveRole(String(u.id))}
                             disabled={updateUser.isPending}
                           >
                             Lưu

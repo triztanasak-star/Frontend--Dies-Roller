@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useWorks } from '../../works/hooks/useWorks';
 
 export default function FinancePage() {

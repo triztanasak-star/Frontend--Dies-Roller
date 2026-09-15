@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState, Fragment } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FiDownload, FiUpload, FiPlus, FiEdit2, FiTrash2, FiList, FiUserPlus, FiPaperclip } from 'react-icons/fi';
+import { FiDownload, FiUpload, FiPlus, FiEdit2, FiTrash2, FiUserPlus, FiPaperclip } from 'react-icons/fi';
 import { useAuth } from '../../../context/AuthContext';
 import LoadingOverlay from '../../../components/LoadingOverlay';
 import ErrorState from '../../../components/ErrorState';
 import EmptyState from '../../../components/EmptyState';
 import * as db from '../../../lib/db';
-import type { DigitalWork, WorkAttachment } from '../../../lib/db';
+import type { DigitalWork } from '../../../lib/db';
 import { exportWorksToExcel, parseWorksExcelFile } from '../../../lib/excel';
 import { useCreateWork, useDeleteWork, useUpdateWork, useUpdateWorkProgress, useWorks } from '../hooks/useWorks';
 import TaskPlansPanel from './TaskPlansPanel';
@@ -96,7 +96,7 @@ export default function WorksPage() {
   const updateProgress = useUpdateWorkProgress();
   const deleteWork = useDeleteWork();
 
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -131,7 +131,7 @@ export default function WorksPage() {
       task_name: values.task_name,
       factory_name: values.factory_name || null,
       description: values.description || null,
-      priority: values.priority,
+      priority: values.priority as 'high' | 'medium' | 'low',
       lead_project: values.lead_project || null,
       assistant: values.assistant || null,
       assigned_to: values.assigned_to ? Number(values.assigned_to) : null,
