@@ -8,8 +8,8 @@ export interface WorkFormValues {
   priority: string;
   lead_project: string;
   assistant: string;
-  assigned_to: string;
-  support_id: string;
+  assigned_to: string;      // ID của PIC (dạng chuỗi để bind với select)
+  support_id: string;       // ID của Support (dạng chuỗi để bind với select)
   project_id: string;
   expected_deadline: string;
   capex_amount: string;
@@ -205,8 +205,7 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                       onChange={(e) => setValues((prev) => ({ ...prev, expected_deadline: e.target.value }))}
                     />
                   </div>
-                  
-                  {/* Trường File đã được sửa chuẩn state bằng callback */}
+
                   <div className="col-md-6">
                     <label className="form-label">File PDF / hình ảnh đính kèm</label>
                     <input
@@ -221,30 +220,36 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     />
                   </div>
 
-                  {/* PIC và Support ở dưới cùng */}
+                  {/* ✅ ĐÃ SỬA: PIC gửi ID vào assigned_to */}
                   <div className="col-md-6">
                     <label className="form-label">PIC</label>
                     <select
                       className="form-select"
-                      value={values.lead_project}
-                      onChange={(e) => setValues((prev) => ({ ...prev, lead_project: e.target.value }))}
+                      value={values.assigned_to}
+                      onChange={(e) => setValues((prev) => ({ ...prev, assigned_to: e.target.value }))}
                     >
                       <option value="">-- Chọn PIC --</option>
                       {users.map((u) => (
-                        <option key={u.id} value={u.name ?? u.email}>{u.name ?? u.email}</option>
+                        <option key={u.id} value={String(u.id)}>
+                          {u.name ?? u.email}
+                        </option>
                       ))}
                     </select>
                   </div>
+
+                  {/* ✅ ĐÃ SỬA: Support gửi ID vào support_id */}
                   <div className="col-md-6">
                     <label className="form-label">Support</label>
                     <select
                       className="form-select"
-                      value={values.assistant}
-                      onChange={(e) => setValues((prev) => ({ ...prev, assistant: e.target.value }))}
+                      value={values.support_id}
+                      onChange={(e) => setValues((prev) => ({ ...prev, support_id: e.target.value }))}
                     >
                       <option value="">-- Chọn Support --</option>
                       {users.map((u) => (
-                        <option key={u.id} value={u.name ?? u.email}>{u.name ?? u.email}</option>
+                        <option key={u.id} value={String(u.id)}>
+                          {u.name ?? u.email}
+                        </option>
                       ))}
                     </select>
                   </div>
