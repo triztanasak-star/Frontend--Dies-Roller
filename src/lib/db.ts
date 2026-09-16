@@ -222,9 +222,9 @@ export const listAttachments = async (workId: number) => {
 export const uploadAttachments = async (workId: number, files: File[]) => {
   const formData = new FormData();
   for (const file of files) formData.append('files', file);
-  const res = await client.post(`/api/works/${workId}/attachments`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  
+  // Đã bỏ headers cứng để Axios tự động gắn token xác thực
+  const res = await client.post(`/api/works/${workId}/attachments`, formData);
   return res.data as { documents: WorkAttachment[] };
 };
 
