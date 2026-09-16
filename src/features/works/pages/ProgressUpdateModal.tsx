@@ -16,12 +16,14 @@ export interface ProgressUpdateModalHandle {
 }
 
 interface ProgressUpdateModalProps {
-  isReviewer: boolean;
+  // Đổi tên hoặc giữ nguyên prop tùy component cha, nhưng ở đây ta cho phép hiện phần tài chính chung
+  canEditFinance?: boolean; 
+  isReviewer?: boolean; // Giữ lại để tương thích ngược nếu component cha vẫn truyền prop này
   onSubmit: (workId: number, values: Partial<ProgressFormValues>) => Promise<void>;
 }
 
 const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdateModalProps>(
-  ({ isReviewer, onSubmit }, ref) => {
+  ({ canEditFinance, isReviewer, onSubmit }, ref) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const [workId, setWorkId] = useState<number | null>(null);
     const [taskName, setTaskName] = useState('');
@@ -40,6 +42,9 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
     const [newMilestoneName, setNewMilestoneName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Cho phép hiển thị khung tài chính nếu 1 trong 2 cờ được bật
+    const showFinanceSection = canEditFinance || isReviewer !== undefined ? (canEditFinance || isReviewer) : true;
+
     useImperativeHandle(ref, () => ({
       open: async (work: DigitalWork) => {
         setWorkId(work.id);
@@ -55,7 +60,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           payback_years: work.payback_years !== null && work.payback_years !== undefined ? Number(work.payback_years) : null,
         });
 
-        // Gọi API lấy danh sách hạng mục với cơ chế tương thích linh hoạt cho cả User và Admin/Manager
+        // Gọi API lấy danh sách hạng mục
         try {
           const res: any = await listTaskPlans(work.id);
           const rawList = Array.isArray(res) ? res : (res?.documents || res?.data || []);
@@ -65,8 +70,8 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
             name: p.step_name || p.name,
             progress: p.progress_percent ?? p.progress ?? 0,
             status: p.status === 'done' || p.status === 'Hoàn thành' ? 'Hoàn thành' 
-                  : p.status === 'in_progress' || p.status === 'Đang thực hiện' ? 'Đang thực hiện' 
-                  : 'Chưa bắt đầu',
+                    : p.status === 'in_progress' || p.status === 'Đang thực hiện' ? 'Đang thực hiện' 
+                    : 'Chưa bắt đầu',
           }));
           setMilestones(loadedPlans);
         } catch (error) {
@@ -199,17 +204,17 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
       if (workId === null) return;
       setIsSubmitting(true);
       try {
+        // Gửi đầy đủ cả tiến độ lẫn thông tin tài chính mà không bị chặn bởi isReviewer nữa
         const payload: Partial<ProgressFormValues> = {
           status: form.status,
           progress_percent: form.progress_percent,
           progress_comment: form.progress_comment,
+          manager_comment: form.manager_comment,
+          capex_amount: form.capex_amount,
+          estimated_saving_per_year: form.estimated_saving_per_year,
+          payback_years: form.payback_years,
         };
-        if (isReviewer) {
-          payload.manager_comment = form.manager_comment;
-          payload.capex_amount = form.capex_amount;
-          payload.estimated_saving_per_year = form.estimated_saving_per_year;
-          payload.payback_years = form.payback_years;
-        }
+
         await onSubmit(workId, payload);
         handleClose();
       } finally {
@@ -311,8 +316,8 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                     </div>
                   </div>
 
-                  {/* Thông tin quản lý & tài chính (Reviewer) */}
-                  {isReviewer && (
+                  {/* Thông tin quản lý & tài chính (Hiển thị cho cả PIC, Support, Manager, Admin) */}
+                  {showFinanceSection && (
                     <>
                       <div className="col-12 mt-4">
                         <hr className="my-2" />
