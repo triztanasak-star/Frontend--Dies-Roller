@@ -8,8 +8,8 @@ export interface WorkFormValues {
   priority: string;
   lead_project: string;
   assistant: string;
-  assigned_to: string;      // ID của PIC (dạng chuỗi để bind với select)
-  support_id: string;       // ID của Support (dạng chuỗi để bind với select)
+  assigned_to: string;
+  support_id: string;
   project_id: string;
   expected_deadline: string;
   capex_amount: string;
@@ -83,8 +83,8 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
         priority: work.priority ?? 'medium',
         lead_project: work.lead_project ?? '',
         assistant: work.assistant ?? '',
-        assigned_to: work.assigned_to ? String(work.assigned_to) : '',
-        support_id: work.support_id ? String(work.support_id) : '',
+        assigned_to: work.assigned_to_name ?? (work.assigned_to ? String(work.assigned_to) : ''),
+        support_id: work.support_name ?? (work.support_id ? String(work.support_id) : ''),
         project_id: work.project_id ? String(work.project_id) : '',
         expected_deadline: work.expected_deadline ? work.expected_deadline.split('T')[0] : '',
         capex_amount: work.capex_amount ? String(work.capex_amount) : '',
@@ -104,8 +104,8 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
         priority: work.priority ?? 'medium',
         lead_project: work.lead_project ?? '',
         assistant: work.assistant ?? '',
-        assigned_to: work.assigned_to ? String(work.assigned_to) : '',
-        support_id: work.support_id ? String(work.support_id) : '',
+        assigned_to: work.assigned_to_name ?? (work.assigned_to ? String(work.assigned_to) : ''),
+        support_id: work.support_name ?? (work.support_id ? String(work.support_id) : ''),
         project_id: work.project_id ? String(work.project_id) : '',
         expected_deadline: work.expected_deadline ? work.expected_deadline.split('T')[0] : '',
         capex_amount: work.capex_amount ? String(work.capex_amount) : '',
@@ -162,12 +162,12 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     <input
                       type="text"
                       className="form-control"
-                      list="factory-list"
+                      list="factory-list-assign"
                       value={values.factory_name}
                       onChange={(e) => setValues((prev) => ({ ...prev, factory_name: e.target.value }))}
                       placeholder="Nhập hoặc chọn"
                     />
-                    <datalist id="factory-list">
+                    <datalist id="factory-list-assign">
                       {FACTORY_OPTIONS.map((factory) => (
                         <option key={factory} value={factory} />
                       ))}
@@ -220,38 +220,40 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     />
                   </div>
 
-                  {/* ✅ ĐÃ SỬA: PIC gửi ID vào assigned_to */}
+                  {/* ✅ PIC — vừa chọn từ dropdown vừa nhập tay */}
                   <div className="col-md-6">
                     <label className="form-label">PIC</label>
-                    <select
-                      className="form-select"
+                    <input
+                      type="text"
+                      className="form-control"
+                      list="pic-list"
+                      placeholder="Chọn hoặc nhập tên PIC..."
                       value={values.assigned_to}
                       onChange={(e) => setValues((prev) => ({ ...prev, assigned_to: e.target.value }))}
-                    >
-                      <option value="">-- Chọn PIC --</option>
+                    />
+                    <datalist id="pic-list">
                       {users.map((u) => (
-                        <option key={u.id} value={String(u.id)}>
-                          {u.name ?? u.email}
-                        </option>
+                        <option key={u.id} value={u.name ?? u.email} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
 
-                  {/* ✅ ĐÃ SỬA: Support gửi ID vào support_id */}
+                  {/* ✅ Support — vừa chọn từ dropdown vừa nhập tay */}
                   <div className="col-md-6">
                     <label className="form-label">Support</label>
-                    <select
-                      className="form-select"
+                    <input
+                      type="text"
+                      className="form-control"
+                      list="support-list"
+                      placeholder="Chọn hoặc nhập tên Support..."
                       value={values.support_id}
                       onChange={(e) => setValues((prev) => ({ ...prev, support_id: e.target.value }))}
-                    >
-                      <option value="">-- Chọn Support --</option>
+                    />
+                    <datalist id="support-list">
                       {users.map((u) => (
-                        <option key={u.id} value={String(u.id)}>
-                          {u.name ?? u.email}
-                        </option>
+                        <option key={u.id} value={u.name ?? u.email} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
                 </div>
               ) : (
@@ -272,12 +274,12 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     <input
                       type="text"
                       className="form-control"
-                      list="factory-list"
+                      list="factory-list-create"
                       value={values.factory_name}
                       onChange={(e) => setValues((prev) => ({ ...prev, factory_name: e.target.value }))}
                       placeholder="Nhập hoặc chọn"
                     />
-                    <datalist id="factory-list">
+                    <datalist id="factory-list-create">
                       {FACTORY_OPTIONS.map((factory) => (
                         <option key={factory} value={factory} />
                       ))}
