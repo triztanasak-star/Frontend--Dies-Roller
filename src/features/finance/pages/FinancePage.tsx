@@ -79,49 +79,83 @@ export default function FinancePage() {
         gap: '16px',
       }}
     >
-      {/* ✅ CSS cho bảng — chữ rõ ở cả light và dark mode */}
+      {/* ✅ CSS cho bảng — tự động theo theme light/dark */}
       <style>{`
         .finance-table {
-          color: var(--text-color, #e5e7eb);
+          color: var(--text-color, #1a1a1a);
         }
         .finance-table tbody td {
-          color: var(--text-color, #e5e7eb) !important;
-          border-color: rgba(148, 163, 184, 0.15) !important;
+          color: var(--text-color, #1a1a1a) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
           vertical-align: middle;
         }
         .finance-table tbody tr:hover {
           background: rgba(148, 163, 184, 0.08);
         }
         .finance-table thead th {
-          color: var(--text-color, #ffffff) !important;
-          background: var(--card-bg, #1a1d2e) !important;
-          border-bottom: 2px solid #334155 !important;
+          color: var(--text-color, #1a1a1a) !important;
+          background: var(--card-bg, #f8f9fa) !important;
+          border-bottom: 2px solid rgba(148, 163, 184, 0.3) !important;
           font-weight: 600;
           padding: 12px 8px;
         }
         .finance-table .cell-name {
-          color: var(--text-color, #f1f5f9) !important;
+          color: var(--text-color, #1a1a1a) !important;
           font-weight: 600;
         }
         .finance-table .cell-capex {
-          color: var(--text-color, #cbd5e1) !important;
+          color: var(--text-color, #1a1a1a) !important;
+          opacity: 0.85;
         }
         .finance-table .cell-saving {
-          color: #38bdf8 !important;
+          color: #0284c7 !important;
           font-weight: 600;
         }
         .finance-table .cell-payback {
-          color: #4ade80 !important;
+          color: #16a34a !important;
           font-weight: 600;
         }
         .finance-table .cell-benefit {
-          color: var(--text-color, #cbd5e1) !important;
+          color: var(--text-color, #1a1a1a) !important;
+          opacity: 0.85;
           white-space: pre-wrap;
           word-break: break-word;
         }
         .finance-table .cell-empty {
+          color: var(--text-color, #1a1a1a) !important;
+          opacity: 0.4;
+        }
+
+        /* ✅ Dark mode: màu sáng hơn để nổi bật trên nền tối */
+        [data-theme="dark"] .finance-table {
+          color: #e5e7eb;
+        }
+        [data-theme="dark"] .finance-table tbody td {
+          color: #e5e7eb !important;
+          border-color: rgba(148, 163, 184, 0.15) !important;
+        }
+        [data-theme="dark"] .finance-table thead th {
+          color: #ffffff !important;
+          background: #1a1d2e !important;
+          border-bottom: 2px solid #334155 !important;
+        }
+        [data-theme="dark"] .finance-table .cell-name {
+          color: #f1f5f9 !important;
+        }
+        [data-theme="dark"] .finance-table .cell-capex {
+          color: #cbd5e1 !important;
+        }
+        [data-theme="dark"] .finance-table .cell-saving {
+          color: #38bdf8 !important;
+        }
+        [data-theme="dark"] .finance-table .cell-payback {
+          color: #4ade80 !important;
+        }
+        [data-theme="dark"] .finance-table .cell-benefit {
+          color: #cbd5e1 !important;
+        }
+        [data-theme="dark"] .finance-table .cell-empty {
           color: #64748b !important;
-          opacity: 0.7;
         }
       `}</style>
 
@@ -138,7 +172,7 @@ export default function FinancePage() {
         <div className="col-md-3">
           <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Tổng tiết kiệm / năm</span>
-            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#38bdf8' }}>
+            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#0284c7' }}>
               {formatCurrency(stats.totalSaving)}
             </h3>
             <span className="text-muted small">{formatRawNumber(stats.totalSaving)}</span>
@@ -148,7 +182,7 @@ export default function FinancePage() {
         <div className="col-md-3">
           <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Thời gian hoàn vốn</span>
-            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#4ade80' }}>
+            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#16a34a' }}>
               {stats.paybackPeriod} năm
             </h3>
             <span className="text-muted small">Capex ÷ Saving/năm</span>
@@ -158,7 +192,7 @@ export default function FinancePage() {
         <div className="col-md-3">
           <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Tiết kiệm tích lũy (5 năm)</span>
-            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#38bdf8' }}>
+            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#0284c7' }}>
               {formatCurrency(stats.cumulativeSaving5Years)}
             </h3>
             <span className="text-muted small">Chưa trừ Capex</span>
@@ -180,7 +214,7 @@ export default function FinancePage() {
       >
         <div
           className="d-flex justify-content-between align-items-center"
-          style={{ flexShrink: 0, padding: '16px 20px', borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}
+          style={{ flexShrink: 0, padding: '16px 20px', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}
         >
           <h5 className="mb-0 fw-bold">Danh sách Capex & Saving</h5>
           <span className="text-muted small">{works.length} khoản mục</span>
