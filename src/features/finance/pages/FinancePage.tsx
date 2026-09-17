@@ -1,14 +1,10 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useWorks } from '../../works/hooks/useWorks';
 
 export default function FinancePage() {
   const workResult = useWorks();
 
-  useEffect(() => {
-    console.log("DEBUG workResult full:", workResult);
-  }, [workResult]);
-
-  // Tự động quét và tìm mảng dữ liệu bên trong Proxy/Object bất kể tên thuộc tính
+  // Tự động quét mảng dữ liệu
   const works = useMemo(() => {
     if (!workResult) return [];
     if (Array.isArray(workResult)) return workResult;
@@ -74,57 +70,144 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="container-fluid p-4">
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        gap: '16px',
+      }}
+    >
+      {/* ✅ CSS cho bảng — chữ rõ ở cả light và dark mode */}
+      <style>{`
+        .finance-table {
+          color: var(--text-color, #e5e7eb);
+        }
+        .finance-table tbody td {
+          color: var(--text-color, #e5e7eb) !important;
+          border-color: rgba(148, 163, 184, 0.15) !important;
+          vertical-align: middle;
+        }
+        .finance-table tbody tr:hover {
+          background: rgba(148, 163, 184, 0.08);
+        }
+        .finance-table thead th {
+          color: var(--text-color, #ffffff) !important;
+          background: var(--card-bg, #1a1d2e) !important;
+          border-bottom: 2px solid #334155 !important;
+          font-weight: 600;
+          padding: 12px 8px;
+        }
+        .finance-table .cell-name {
+          color: var(--text-color, #f1f5f9) !important;
+          font-weight: 600;
+        }
+        .finance-table .cell-capex {
+          color: var(--text-color, #cbd5e1) !important;
+        }
+        .finance-table .cell-saving {
+          color: #38bdf8 !important;
+          font-weight: 600;
+        }
+        .finance-table .cell-payback {
+          color: #4ade80 !important;
+          font-weight: 600;
+        }
+        .finance-table .cell-benefit {
+          color: var(--text-color, #cbd5e1) !important;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        .finance-table .cell-empty {
+          color: #64748b !important;
+          opacity: 0.7;
+        }
+      `}</style>
+
       {/* 4 Thẻ thống kê tổng quan */}
-      <div className="row g-3 mb-4">
+      <div className="row g-3" style={{ flexShrink: 0 }}>
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm p-3 h-100">
+          <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Tổng vốn đầu tư (CAPEX)</span>
-            <h3 className="text-dark fw-bold mt-2 mb-1">{formatCurrency(stats.totalCapex)}</h3>
+            <h3 className="fw-bold mt-2 mb-1">{formatCurrency(stats.totalCapex)}</h3>
             <span className="text-muted small">{formatRawNumber(stats.totalCapex).replace('/năm', '')}</span>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm p-3 h-100">
+          <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Tổng tiết kiệm / năm</span>
-            <h3 className="text-primary fw-bold mt-2 mb-1">{formatCurrency(stats.totalSaving)}</h3>
+            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#38bdf8' }}>
+              {formatCurrency(stats.totalSaving)}
+            </h3>
             <span className="text-muted small">{formatRawNumber(stats.totalSaving)}</span>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm p-3 h-100">
+          <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Thời gian hoàn vốn</span>
-            <h3 className="text-primary fw-bold mt-2 mb-1">{stats.paybackPeriod} năm</h3>
+            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#4ade80' }}>
+              {stats.paybackPeriod} năm
+            </h3>
             <span className="text-muted small">Capex ÷ Saving/năm</span>
           </div>
         </div>
 
         <div className="col-md-3">
-          <div className="card border-0 shadow-sm p-3 h-100">
+          <div className="card-surface h-100">
             <span className="text-muted small fw-bold text-uppercase">Tiết kiệm tích lũy (5 năm)</span>
-            <h3 className="text-primary fw-bold mt-2 mb-1">{formatCurrency(stats.cumulativeSaving5Years)}</h3>
+            <h3 className="fw-bold mt-2 mb-1" style={{ color: '#38bdf8' }}>
+              {formatCurrency(stats.cumulativeSaving5Years)}
+            </h3>
             <span className="text-muted small">Chưa trừ Capex</span>
           </div>
         </div>
       </div>
 
       {/* Bảng danh sách Capex & Saving */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <div
+        className="card-surface"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          overflow: 'hidden',
+          padding: 0,
+        }}
+      >
+        <div
+          className="d-flex justify-content-between align-items-center"
+          style={{ flexShrink: 0, padding: '16px 20px', borderBottom: '1px solid rgba(148, 163, 184, 0.15)' }}
+        >
           <h5 className="mb-0 fw-bold">Danh sách Capex & Saving</h5>
           <span className="text-muted small">{works.length} khoản mục</span>
         </div>
-        <div className="table-responsive">
-          <table className="table align-middle mb-0">
-            <thead className="table-light text-muted small">
+
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'auto',
+            minHeight: 0,
+          }}
+        >
+          <table className="table align-middle mb-0 finance-table">
+            <thead
+              style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 10,
+              }}
+            >
               <tr>
-                <th className="py-3 ps-3" style={{ width: '28%' }}>HẠNG MỤC / DỰ ÁN</th>
-                <th className="py-3" style={{ width: '13%' }}>CAPEX (VND)</th>
-                <th className="py-3" style={{ width: '14%' }}>SAVING (VND) / NĂM</th>
-                <th className="py-3 text-center" style={{ width: '10%' }}>HOÀN VỐN</th>
-                <th className="py-3 pe-3" style={{ width: '35%' }}>LỢI ÍCH KHÁC</th>
+                <th className="ps-3" style={{ width: '28%' }}>HẠNG MỤC / DỰ ÁN</th>
+                <th style={{ width: '13%' }}>CAPEX (VND)</th>
+                <th style={{ width: '14%' }}>SAVING (VND) / NĂM</th>
+                <th className="text-center" style={{ width: '10%' }}>HOÀN VỐN</th>
+                <th className="pe-3" style={{ width: '35%' }}>LỢI ÍCH KHÁC</th>
               </tr>
             </thead>
             <tbody>
@@ -132,30 +215,38 @@ export default function FinancePage() {
                 const capexVal = Number(work.capex_amount || work.capex || 0);
                 const savingVal = Number(work.estimated_saving_per_year || work.saving || work.estimated_saving || 0);
                 
-                // Tự động tính thời gian hoàn vốn cho từng dòng (nếu DB chưa lưu sẵn)
                 let paybackVal = work.payback_years ? Number(work.payback_years) : 0;
                 if (!paybackVal && savingVal > 0 && capexVal > 0) {
                   paybackVal = Number((capexVal / savingVal).toFixed(1));
                 }
 
-                const benefits = work.other_benefits || work.manager_comment || '—';
+                const benefits = work.other_benefits || work.manager_comment || '';
 
                 return (
                   <tr key={work.id || index}>
-                    <td className="ps-3 fw-semibold text-dark">
-                      {work.task_name || work.name || 'Không có tên'} {work.factory_name ? `(${work.factory_name})` : ''}
+                    <td className="ps-3 cell-name">
+                      {work.task_name || work.name || 'Không có tên'}{' '}
+                      {work.factory_name ? `(${work.factory_name})` : ''}
                     </td>
-                    <td className="text-secondary">
-                      {capexVal ? new Intl.NumberFormat('vi-VN').format(capexVal) : '—'}
+                    <td className="cell-capex">
+                      {capexVal ? (
+                        new Intl.NumberFormat('vi-VN').format(capexVal)
+                      ) : (
+                        <span className="cell-empty">—</span>
+                      )}
                     </td>
-                    <td className="text-primary fw-medium">
-                      {savingVal ? new Intl.NumberFormat('vi-VN').format(savingVal) : '—'}
+                    <td className="cell-saving">
+                      {savingVal ? (
+                        new Intl.NumberFormat('vi-VN').format(savingVal)
+                      ) : (
+                        <span className="cell-empty">—</span>
+                      )}
                     </td>
-                    <td className="text-center fw-semibold text-dark">
-                      {paybackVal ? `${paybackVal} năm` : '—'}
+                    <td className="text-center cell-payback">
+                      {paybackVal ? `${paybackVal} năm` : <span className="cell-empty">—</span>}
                     </td>
-                    <td className="text-muted pe-3" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {benefits}
+                    <td className="pe-3 cell-benefit">
+                      {benefits || <span className="cell-empty">—</span>}
                     </td>
                   </tr>
                 );
