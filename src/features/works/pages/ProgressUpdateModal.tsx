@@ -242,24 +242,42 @@ const showFinanceSection = true;
                       </span>
                     </div>
                     
-                    <div className="input-group mb-3">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Thêm hạng mục mới..."
-                        value={newMilestoneName}
-                        onChange={(e) => setNewMilestoneName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddMilestone();
-                          }
-                        }}
-                      />
-                      <button type="button" className="btn btn-primary px-4" onClick={handleAddMilestone}>
-                        Thêm
-                      </button>
-                    </div>
+                  <div className="d-flex gap-2 mb-3 align-items-start">
+  <textarea
+    className="form-control"
+    placeholder="Thêm hạng mục mới..."
+    value={newMilestoneName}
+    rows={1}
+    style={{
+      resize: 'none',
+      overflow: 'hidden',
+      minHeight: '38px',
+      lineHeight: '1.5',
+      whiteSpace: 'pre-wrap',
+      wordWrap: 'break-word',
+    }}
+    onChange={(e) => setNewMilestoneName(e.target.value)}
+    onInput={(e: any) => {
+      e.target.style.height = 'auto';
+      e.target.style.height = e.target.scrollHeight + 'px';
+    }}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleAddMilestone();
+        (e.target as HTMLTextAreaElement).style.height = 'auto';
+      }
+    }}
+  />
+  <button
+    type="button"
+    className="btn btn-primary px-4"
+    onClick={handleAddMilestone}
+    style={{ height: '38px', flexShrink: 0 }}
+  >
+    Thêm
+  </button>
+</div>
 
                     <div className="d-flex flex-column gap-2" style={{ maxHeight: '250px', overflowY: 'auto' }}>
                       {milestones.length === 0 ? (
