@@ -180,7 +180,7 @@ export default function WorksPage() {
 
   return (
     <div>
-      {/* ✅ CSS cho sticky header */}
+      {/* ✅ CSS cho sticky header - header luôn nền trắng + chữ đen */}
       <style>{`
         .sticky-table-wrap {
           max-height: calc(100vh - 300px);
@@ -193,15 +193,15 @@ export default function WorksPage() {
           position: sticky;
           top: 0;
           z-index: 10;
-          background: #ffffff;
         }
         .sticky-table-wrap table thead tr {
           background: #ffffff;
         }
         .sticky-table-wrap table thead th {
           background: #ffffff !important;
+          color: #1a1a1a !important;
           border-bottom: 2px solid #e5e7eb !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
       `}</style>
 
