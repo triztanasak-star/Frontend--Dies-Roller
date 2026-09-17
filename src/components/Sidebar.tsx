@@ -15,43 +15,61 @@ export default function Sidebar() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <aside className="app-sidebar">
-      {/* Phần Brand: Đã bỏ chữ, phóng to khung chứa logo tối đa */}
-      <div className="sidebar-brand d-flex flex-column align-items-center justify-content-center px-3 py-3">
-        <div 
+    <aside
+      className="app-sidebar"
+      style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Phần Brand — cố định trên cùng */}
+      <div
+        className="sidebar-brand d-flex flex-column align-items-center justify-content-center px-3 py-3"
+        style={{ flexShrink: 0 }}
+      >
+        <div
           className="bg-white rounded overflow-hidden shadow-sm d-flex align-items-center justify-content-center p-1 w-100"
           style={{ maxWidth: '190px', height: '90px' }}
         >
-          <img 
-            src={logoImg} 
-            alt="Logo" 
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+          <img
+            src={logoImg}
+            alt="Logo"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
         </div>
       </div>
 
-      <nav className="nav flex-column">
-        <NavLink to="/dashboard" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
-          <FiGrid /> Tổng quan
-        </NavLink>
-        <NavLink to="/works" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
-          <FiCheckSquare /> Theo dõi dự án
-        </NavLink>
-        <NavLink to="/finance" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
-          <FiPieChart /> Phân tích tài chính
-        </NavLink>
-      </nav>
-
-      <div className="nav-section-label">Quản trị</div>
-      <nav className="nav flex-column">
-        {can('admin') && (
-          <NavLink to="/users" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
-            <FiUsers /> Người dùng
+      {/* Phần Menu — flex 1, cuộn nếu dài */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <nav className="nav flex-column">
+          <NavLink to="/dashboard" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
+            <FiGrid /> Tổng quan
           </NavLink>
-        )}
-      </nav>
+          <NavLink to="/works" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
+            <FiCheckSquare /> Theo dõi dự án
+          </NavLink>
+          <NavLink to="/finance" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
+            <FiPieChart /> Phân tích tài chính
+          </NavLink>
+        </nav>
 
-      <div className="sidebar-footer">
+        <div className="nav-section-label">Quản trị</div>
+        <nav className="nav flex-column">
+          {can('admin') && (
+            <NavLink to="/users" className="nav-link d-flex align-items-center gap-2 px-3 py-2">
+              <FiUsers /> Người dùng
+            </NavLink>
+          )}
+        </nav>
+      </div>
+
+      {/* Phần Footer — LUÔN ở cuối, không bị cuộn */}
+      <div
+        className="sidebar-footer"
+        style={{ flexShrink: 0, marginTop: 'auto' }}
+      >
         <div className="sidebar-user">
           {user?.name}
           <span className="badge text-bg-primary ms-2">{ROLE_LABEL[user?.role ?? 'user']}</span>

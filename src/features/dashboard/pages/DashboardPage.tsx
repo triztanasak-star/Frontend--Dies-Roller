@@ -220,37 +220,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ✅ Khối Ưu tiên cao — có thanh trượt dọc */}
-      <div
-        className="card-surface"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: 'calc(100vh - 500px)',
-        }}
-      >
+      <div className="card-surface">
         <h6 className="mb-3">Ưu tiên cao — chưa hoàn thành</h6>
         {highPriorityIncomplete.length === 0 && <EmptyState message="Không có dự án ưu tiên cao nào đang chờ." />}
         {highPriorityIncomplete.length > 0 && (
-          <div
-            className="table-responsive-wrap"
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'auto',
-              minHeight: 0,
-            }}
-          >
+          <div className="table-responsive-wrap">
             <table className="table align-middle mb-0">
-              <thead
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  background: 'var(--card-bg, #1a1d2e)',
-                  color: 'var(--text-color, #ffffff)',
-                  zIndex: 10,
-                }}
-              >
+              <thead>
                 <tr>
                   <th>DỰ ÁN</th>
                   <th>NHÀ MÁY</th>
