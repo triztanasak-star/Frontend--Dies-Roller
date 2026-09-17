@@ -55,10 +55,28 @@ export default function DashboardPage() {
     };
   }, [works]);
 
-  const topProjects = useMemo(
-    () => [...works].sort((a, b) => b.progress_percent - a.progress_percent).slice(0, 8),
-    [works],
-  );
+  // ✅ Gộp nhóm theo task_name — tính % trung bình
+  const topProjects = useMemo(() => {
+    const groups: Record<string, { total: number; count: number }> = {};
+    
+    works.forEach((work) => {
+      const key = work.task_name?.trim() || 'Không tên';
+      if (!groups[key]) {
+        groups[key] = { total: 0, count: 0 };
+      }
+      groups[key].total += work.progress_percent ?? 0;
+      groups[key].count += 1;
+    });
+    
+    return Object.entries(groups)
+      .map(([taskName, { total, count }]) => ({
+        task_name: taskName,
+        avgProgress: Math.round(total / count),
+        count: count,
+      }))
+      .sort((a, b) => b.avgProgress - a.avgProgress)
+      .slice(0, 8);
+  }, [works]);
 
   const highPriorityIncomplete = useMemo(
     () => works.filter((w) => w.priority === 'high' && w.progress_percent < 100),
@@ -128,16 +146,23 @@ export default function DashboardPage() {
             <h6 className="mb-3">Tiến độ theo dự án chính</h6>
             {topProjects.length === 0 && <EmptyState message="Chưa có dự án nào." />}
             <div className="d-flex flex-column gap-2">
-              {topProjects.map((w) => {
-                const bucket = progressBucket(w.progress_percent);
+              {topProjects.map((group) => {
+                const bucket = progressBucket(group.avgProgress);
                 const barColor = bucket === 'good' ? 'var(--status-good)' : bucket === 'warn' ? 'var(--status-warn)' : 'var(--status-bad)';
                 return (
-                  <div key={w.id} className="d-flex align-items-center gap-2">
-                    <div className="text-truncate" style={{ width: 180, fontSize: '0.85rem' }}>{w.task_name}</div>
-                    <div className="flex-grow-1" style={{ height: 8, background: '#e6e9f5', borderRadius: 999 }}>
-                      <div style={{ width: `${w.progress_percent}%`, height: '100%', background: barColor, borderRadius: 999 }} />
+                  <div key={group.task_name} className="d-flex align-items-center gap-2">
+                    <div className="text-truncate" style={{ width: 180, fontSize: '0.85rem' }} title={group.task_name}>
+                      {group.task_name}
+                      {group.count > 1 && (
+                        <span className="text-muted ms-1" style={{ fontSize: '0.75rem' }}>
+                          ({group.count})
+                        </span>
+                      )}
                     </div>
-                    <div style={{ width: 42, fontSize: '0.85rem' }} className="text-end fw-semibold">{w.progress_percent}%</div>
+                    <div className="flex-grow-1" style={{ height: 8, background: '#e6e9f5', borderRadius: 999 }}>
+                      <div style={{ width: `${group.avgProgress}%`, height: '100%', background: barColor, borderRadius: 999 }} />
+                    </div>
+                    <div style={{ width: 42, fontSize: '0.85rem' }} className="text-end fw-semibold">{group.avgProgress}%</div>
                   </div>
                 );
               })}
