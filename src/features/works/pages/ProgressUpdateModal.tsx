@@ -23,7 +23,7 @@ interface ProgressUpdateModalProps {
 }
 
 const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdateModalProps>(
-  ({ canEditFinance, isReviewer, onSubmit }, ref) => {
+  ({ onSubmit }, ref) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const [workId, setWorkId] = useState<number | null>(null);
     const [taskName, setTaskName] = useState('');
@@ -41,9 +41,8 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
     const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
     const [newMilestoneName, setNewMilestoneName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Cho phép hiển thị khung tài chính nếu 1 trong 2 cờ được bật
-    const showFinanceSection = canEditFinance || isReviewer !== undefined ? (canEditFinance || isReviewer) : true;
+// ✅ Luôn hiển thị đầy đủ thông tin tài chính cho mọi user
+const showFinanceSection = true;
 
     useImperativeHandle(ref, () => ({
       open: async (work: DigitalWork) => {
