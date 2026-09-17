@@ -179,33 +179,15 @@ export default function WorksPage() {
   };
 
   return (
-    <div>
-      {/* ✅ CSS cho sticky header - header luôn nền trắng + chữ đen */}
-      <style>{`
-        .sticky-table-wrap {
-          max-height: calc(100vh - 300px);
-          overflow-y: auto;
-          overflow-x: auto;
-          position: relative;
-          border-radius: 8px;
-        }
-        .sticky-table-wrap table thead {
-          position: sticky;
-          top: 0;
-          z-index: 10;
-        }
-        .sticky-table-wrap table thead tr {
-          background: #ffffff;
-        }
-        .sticky-table-wrap table thead th {
-          background: #ffffff !important;
-          color: #1a1a1a !important;
-          border-bottom: 2px solid #e5e7eb !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-      `}</style>
-
-      <div className="page-header">
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <div className="page-header" style={{ flexShrink: 0 }}>
         <div>
           <h1 className="h4">Theo dõi dự án</h1>
           <p className="text-muted mb-0">Danh sách dự án Digital theo nhà máy </p>
@@ -238,8 +220,17 @@ export default function WorksPage() {
       {isError && <ErrorState />}
 
       {!isLoading && !isError && (
-        <div className="data-table-card">
-          <div className="data-table-toolbar">
+        <div
+          className="data-table-card"
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <div className="data-table-toolbar" style={{ flexShrink: 0 }}>
             <input
               className="form-control"
               style={{ maxWidth: 280 }}
@@ -270,9 +261,25 @@ export default function WorksPage() {
           {filtered.length === 0 && <EmptyState message="Không có dự án phù hợp." />}
 
           {filtered.length > 0 && (
-            <div className="sticky-table-wrap">
+            <div
+              className="table-responsive-wrap"
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'auto',
+                minHeight: 0,
+              }}
+            >
               <table className="table align-middle mb-0">
-                <thead>
+                <thead
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    background: 'var(--card-bg, #1a1d2e)',
+                    color: 'var(--text-color, #ffffff)',
+                    zIndex: 10,
+                  }}
+                >
                   <tr>
                     <th>NO.</th>
                     <th>DỰ ÁN</th>
