@@ -83,8 +83,8 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
         priority: work.priority ?? 'medium',
         lead_project: work.lead_project ?? '',
         assistant: work.assistant ?? '',
-        assigned_to: work.assigned_to_name ?? (work.assigned_to ? String(work.assigned_to) : ''),
-        support_id: work.support_name ?? (work.support_id ? String(work.support_id) : ''),
+        assigned_to: work.assigned_to ? String(work.assigned_to) : '',
+        support_id: work.support_id ? String(work.support_id) : '',
         project_id: work.project_id ? String(work.project_id) : '',
         expected_deadline: work.expected_deadline ? work.expected_deadline.split('T')[0] : '',
         capex_amount: work.capex_amount ? String(work.capex_amount) : '',
@@ -104,8 +104,8 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
         priority: work.priority ?? 'medium',
         lead_project: work.lead_project ?? '',
         assistant: work.assistant ?? '',
-        assigned_to: work.assigned_to_name ?? (work.assigned_to ? String(work.assigned_to) : ''),
-        support_id: work.support_name ?? (work.support_id ? String(work.support_id) : ''),
+        assigned_to: work.assigned_to ? String(work.assigned_to) : '',
+        support_id: work.support_id ? String(work.support_id) : '',
         project_id: work.project_id ? String(work.project_id) : '',
         expected_deadline: work.expected_deadline ? work.expected_deadline.split('T')[0] : '',
         capex_amount: work.capex_amount ? String(work.capex_amount) : '',
@@ -220,7 +220,7 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     />
                   </div>
 
-                  {/* ✅ PIC — vừa chọn từ dropdown vừa nhập tay */}
+                  {/* ✅ PIC: vừa chọn từ dropdown, vừa nhập tự do */}
                   <div className="col-md-6">
                     <label className="form-label">PIC</label>
                     <input
@@ -233,12 +233,14 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     />
                     <datalist id="pic-list">
                       {users.map((u) => (
-                        <option key={u.id} value={u.name ?? u.email} />
+                        <option key={u.id} value={String(u.id)}>
+                          {u.name ?? u.email}
+                        </option>
                       ))}
                     </datalist>
                   </div>
 
-                  {/* ✅ Support — vừa chọn từ dropdown vừa nhập tay */}
+                  {/* ✅ Support: vừa chọn từ dropdown, vừa nhập tự do */}
                   <div className="col-md-6">
                     <label className="form-label">Support</label>
                     <input
@@ -251,7 +253,9 @@ const WorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onSubmit 
                     />
                     <datalist id="support-list">
                       {users.map((u) => (
-                        <option key={u.id} value={u.name ?? u.email} />
+                        <option key={u.id} value={String(u.id)}>
+                          {u.name ?? u.email}
+                        </option>
                       ))}
                     </datalist>
                   </div>
