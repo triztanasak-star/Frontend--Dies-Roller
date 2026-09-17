@@ -135,7 +135,7 @@ export default function WorksPage() {
       lead_project: values.lead_project || null,
       assistant: values.assistant || null,
       assigned_to: null,
-support_id: null,
+      support_id: null,
       project_id: values.project_id ? Number(values.project_id) : null,
       expected_deadline: values.expected_deadline || null,
       capex_amount: values.capex_amount ? Number(values.capex_amount) : null,
@@ -146,7 +146,6 @@ support_id: null,
     if (editingId) {
       await updateWork.mutateAsync({ id: editingId, payload });
       
-      // Xử lý upload thêm file đính kèm khi cập nhật dự án
       if (values.files && values.files.length > 0) {
         await db.uploadAttachments(editingId, values.files);
       }
@@ -181,6 +180,31 @@ support_id: null,
 
   return (
     <div>
+      {/* ✅ CSS cho sticky header */}
+      <style>{`
+        .sticky-table-wrap {
+          max-height: calc(100vh - 300px);
+          overflow-y: auto;
+          overflow-x: auto;
+          position: relative;
+          border-radius: 8px;
+        }
+        .sticky-table-wrap table thead {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: #ffffff;
+        }
+        .sticky-table-wrap table thead tr {
+          background: #ffffff;
+        }
+        .sticky-table-wrap table thead th {
+          background: #ffffff !important;
+          border-bottom: 2px solid #e5e7eb !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+      `}</style>
+
       <div className="page-header">
         <div>
           <h1 className="h4">Theo dõi dự án</h1>
@@ -246,7 +270,7 @@ support_id: null,
           {filtered.length === 0 && <EmptyState message="Không có dự án phù hợp." />}
 
           {filtered.length > 0 && (
-            <div className="table-responsive-wrap">
+            <div className="sticky-table-wrap">
               <table className="table align-middle mb-0">
                 <thead>
                   <tr>
@@ -331,21 +355,6 @@ support_id: null,
                                 <FiUserPlus />
                               </button>
                             )}
-
-                            {/* <button
-                              type="button"
-                              className="btn btn-sm btn-link"
-                              title="Kế hoạch thực hiện"
-                              disabled={!isManagerOrAdmin && !isOwner}
-                              style={(!isManagerOrAdmin && !isOwner) ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-                              onClick={() => {
-                                if (isManagerOrAdmin || isOwner) {
-                                  setExpandedId(expandedId === work.id ? null : work.id);
-                                }
-                              }}
-                            >
-                              <FiList />
-                            </button> */}
 
                             <button
                               type="button"
