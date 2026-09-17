@@ -16,9 +16,8 @@ export interface ProgressUpdateModalHandle {
 }
 
 interface ProgressUpdateModalProps {
-  // Đổi tên hoặc giữ nguyên prop tùy component cha, nhưng ở đây ta cho phép hiện phần tài chính chung
-  canEditFinance?: boolean; 
-  isReviewer?: boolean; // Giữ lại để tương thích ngược nếu component cha vẫn truyền prop này
+  canEditFinance?: boolean;
+  isReviewer?: boolean;
   onSubmit: (workId: number, values: Partial<ProgressFormValues>) => Promise<void>;
 }
 
@@ -41,8 +40,8 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
     const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
     const [newMilestoneName, setNewMilestoneName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-// ✅ Luôn hiển thị đầy đủ thông tin tài chính cho mọi user
-const showFinanceSection = true;
+
+    const showFinanceSection = true;
 
     useImperativeHandle(ref, () => ({
       open: async (work: DigitalWork) => {
@@ -59,7 +58,6 @@ const showFinanceSection = true;
           payback_years: work.payback_years !== null && work.payback_years !== undefined ? Number(work.payback_years) : null,
         });
 
-        // Gọi API lấy danh sách hạng mục
         try {
           const res: any = await listTaskPlans(work.id);
           const rawList = Array.isArray(res) ? res : (res?.documents || res?.data || []);
@@ -78,7 +76,6 @@ const showFinanceSection = true;
           setMilestones([]);
         }
 
-        // Mở Modal bằng Bootstrap API
         if (modalRef.current && window.bootstrap) {
           const modalInstance = window.bootstrap.Modal.getOrCreateInstance(modalRef.current);
           modalInstance.show();
@@ -203,7 +200,6 @@ const showFinanceSection = true;
       if (workId === null) return;
       setIsSubmitting(true);
       try {
-        // Gửi đầy đủ cả tiến độ lẫn thông tin tài chính mà không bị chặn bởi isReviewer nữa
         const payload: Partial<ProgressFormValues> = {
           status: form.status,
           progress_percent: form.progress_percent,
@@ -223,6 +219,45 @@ const showFinanceSection = true;
 
     return (
       <div className="modal fade" ref={modalRef} tabIndex={-1} aria-hidden="true">
+        <style>{`
+          /* ✅ Ô input trong modal tự động theo theme */
+          .progress-modal-input {
+            background: var(--input-bg, rgba(148, 163, 184, 0.08)) !important;
+            color: var(--text-color, #e5e7eb) !important;
+            border: 1px solid var(--border-color, rgba(148, 163, 184, 0.25)) !important;
+          }
+          .progress-modal-input:focus {
+            background: var(--input-bg, rgba(148, 163, 184, 0.12)) !important;
+            color: var(--text-color, #e5e7eb) !important;
+            border-color: var(--primary-color, #3b82f6) !important;
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+          }
+          .progress-modal-input::placeholder {
+            color: var(--text-muted, #94a3b8) !important;
+            opacity: 0.7;
+          }
+          .progress-milestone-row {
+            background: var(--milestone-bg, rgba(148, 163, 184, 0.08)) !important;
+            border: 1px solid var(--border-color, rgba(148, 163, 184, 0.2)) !important;
+            border-radius: 6px;
+          }
+          .progress-milestone-empty {
+            background: var(--milestone-bg, rgba(148, 163, 184, 0.05)) !important;
+            border: 1px solid var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+          }
+
+          /* Dark mode override */
+          [data-theme="dark"] .progress-modal-input {
+            background: rgba(30, 41, 59, 0.6) !important;
+            color: #e5e7eb !important;
+            border-color: rgba(148, 163, 184, 0.25) !important;
+          }
+          [data-theme="dark"] .progress-milestone-row {
+            background: rgba(30, 41, 59, 0.4) !important;
+            border-color: rgba(148, 163, 184, 0.15) !important;
+          }
+        `}</style>
+
         <div className="modal-dialog modal-lg">
           <div className="modal-content">
             <form onSubmit={handleSubmit}>
@@ -242,53 +277,53 @@ const showFinanceSection = true;
                       </span>
                     </div>
                     
-                  <div className="d-flex gap-2 mb-3 align-items-start">
-  <textarea
-    className="form-control"
-    placeholder="Thêm hạng mục mới..."
-    value={newMilestoneName}
-    rows={1}
-    style={{
-      resize: 'none',
-      overflow: 'hidden',
-      minHeight: '38px',
-      lineHeight: '1.5',
-      whiteSpace: 'pre-wrap',
-      wordWrap: 'break-word',
-    }}
-    onChange={(e) => setNewMilestoneName(e.target.value)}
-    onInput={(e: any) => {
-      e.target.style.height = 'auto';
-      e.target.style.height = e.target.scrollHeight + 'px';
-    }}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleAddMilestone();
-        (e.target as HTMLTextAreaElement).style.height = 'auto';
-      }
-    }}
-  />
-  <button
-    type="button"
-    className="btn btn-primary px-4"
-    onClick={handleAddMilestone}
-    style={{ height: '38px', flexShrink: 0 }}
-  >
-    Thêm
-  </button>
-</div>
+                    <div className="d-flex gap-2 mb-3 align-items-start">
+                      <textarea
+                        className="form-control progress-modal-input"
+                        placeholder="Thêm hạng mục mới..."
+                        value={newMilestoneName}
+                        rows={1}
+                        style={{
+                          resize: 'none',
+                          overflow: 'hidden',
+                          minHeight: '38px',
+                          lineHeight: '1.5',
+                          whiteSpace: 'pre-wrap',
+                          wordWrap: 'break-word',
+                        }}
+                        onChange={(e) => setNewMilestoneName(e.target.value)}
+                        onInput={(e: any) => {
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddMilestone();
+                            (e.target as HTMLTextAreaElement).style.height = 'auto';
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary px-4"
+                        onClick={handleAddMilestone}
+                        style={{ height: '38px', flexShrink: 0 }}
+                      >
+                        Thêm
+                      </button>
+                    </div>
 
                     <div className="d-flex flex-column gap-2" style={{ maxHeight: '250px', overflowY: 'auto' }}>
                       {milestones.length === 0 ? (
-                        <div className="text-muted text-center py-2 border rounded bg-light small">
+                        <div className="text-muted text-center py-2 progress-milestone-empty small">
                           Chưa có hạng mục nào.
                         </div>
                       ) : (
                         milestones.map((item) => (
-                          <div key={item.id} className="d-flex align-items-center gap-2 bg-light p-2 rounded border">
+                          <div key={item.id} className="d-flex align-items-center gap-2 p-2 progress-milestone-row">
                             <textarea
-                              className="form-control form-control-sm bg-white"
+                              className="form-control form-control-sm progress-modal-input"
                               value={item.name}
                               rows={1}
                               style={{ resize: 'none', overflow: 'hidden', minHeight: '31px', lineHeight: '1.4' }}
@@ -302,16 +337,20 @@ const showFinanceSection = true;
                             <div className="input-group input-group-sm" style={{ width: '150px' }}>
                               <input
                                 type="number"
-                                className="form-control bg-white text-center"
+                                className="form-control text-center progress-modal-input"
                                 value={item.progress}
                                 min={0}
                                 max={100}
                                 onChange={(e) => handleUpdateMilestone(item.id, 'progress', e.target.value)}
                               />
-                              <span className="input-group-text">%</span>
+                              <span className="input-group-text" style={{
+                                background: 'var(--input-bg, rgba(148,163,184,0.08))',
+                                color: 'var(--text-color, #e5e7eb)',
+                                borderColor: 'var(--border-color, rgba(148,163,184,0.25))',
+                              }}>%</span>
                             </div>
                             <select
-                              className="form-select form-select-sm bg-white"
+                              className="form-select form-select-sm progress-modal-input"
                               style={{ width: '140px' }}
                               value={item.status}
                               onChange={(e) => handleUpdateMilestone(item.id, 'status', e.target.value)}
@@ -333,7 +372,7 @@ const showFinanceSection = true;
                     </div>
                   </div>
 
-                  {/* Thông tin quản lý & tài chính (Hiển thị cho cả PIC, Support, Manager, Admin) */}
+                  {/* Thông tin quản lý & tài chính */}
                   {showFinanceSection && (
                     <>
                       <div className="col-12 mt-4">
@@ -346,7 +385,7 @@ const showFinanceSection = true;
                         <input
                           type="number"
                           step="0.01"
-                          className="form-control"
+                          className="form-control progress-modal-input"
                           value={form.capex_amount ?? ''}
                           onChange={(e) => setForm({ ...form, capex_amount: e.target.value ? Number(e.target.value) : null })}
                         />
@@ -356,7 +395,7 @@ const showFinanceSection = true;
                         <input
                           type="number"
                           step="0.01"
-                          className="form-control"
+                          className="form-control progress-modal-input"
                           value={form.estimated_saving_per_year ?? ''}
                           onChange={(e) => setForm({ ...form, estimated_saving_per_year: e.target.value ? Number(e.target.value) : null })}
                         />
@@ -366,7 +405,7 @@ const showFinanceSection = true;
                         <input
                           type="number" 
                           step="0.1"
-                          className="form-control"
+                          className="form-control progress-modal-input"
                           value={form.payback_years ?? ''}
                           onChange={(e) => setForm({ ...form, payback_years: e.target.value ? Number(e.target.value) : null })}
                         />
@@ -375,7 +414,7 @@ const showFinanceSection = true;
                       <div className="col-12">
                         <label className="form-label">Lợi ích khác</label>
                         <textarea
-                          className="form-control"
+                          className="form-control progress-modal-input"
                           style={{ minHeight: '85px', resize: 'vertical' }}
                           value={form.manager_comment}
                           onChange={(e) => setForm({ ...form, manager_comment: e.target.value })}
