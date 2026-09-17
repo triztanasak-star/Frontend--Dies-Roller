@@ -55,7 +55,6 @@ export default function DashboardPage() {
     };
   }, [works]);
 
-  // ✅ Gộp nhóm theo task_name — tính % trung bình
   const topProjects = useMemo(() => {
     const groups: Record<string, { total: number; count: number }> = {};
     
@@ -93,8 +92,16 @@ export default function DashboardPage() {
   if (worksQuery.isError) return <ErrorState />;
 
   return (
-    <div>
-      <div className="page-header">
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        gap: '12px',
+      }}
+    >
+      <div className="page-header" style={{ flexShrink: 0 }}>
         <div>
           <h1 className="h4">Tổng quan hoạt động Digital Team</h1>
           <p className="text-muted mb-0">
@@ -103,7 +110,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="row g-3 mb-3">
+      <div className="row g-3" style={{ flexShrink: 0 }}>
         <div className="col-md">
           <div className="card-surface h-100">
             <div className="text-muted small">Tổng số dự án</div>
@@ -140,7 +147,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="row g-3 mb-3">
+      <div className="row g-3" style={{ flexShrink: 0 }}>
         <div className="col-lg-7">
           <div className="card-surface h-100">
             <h6 className="mb-3">Tiến độ theo dự án chính</h6>
@@ -220,13 +227,38 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="card-surface">
-        <h6 className="mb-3">Ưu tiên cao — chưa hoàn thành</h6>
+      <div
+        className="card-surface"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        <h6 className="mb-3" style={{ flexShrink: 0 }}>Ưu tiên cao — chưa hoàn thành</h6>
         {highPriorityIncomplete.length === 0 && <EmptyState message="Không có dự án ưu tiên cao nào đang chờ." />}
         {highPriorityIncomplete.length > 0 && (
-          <div className="table-responsive-wrap">
+          <div
+            className="table-responsive-wrap"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'auto',
+              minHeight: 0,
+            }}
+          >
             <table className="table align-middle mb-0">
-              <thead>
+              <thead
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  background: 'var(--card-bg, #1a1d2e)',
+                  color: 'var(--text-color, #ffffff)',
+                  zIndex: 10,
+                }}
+              >
                 <tr>
                   <th>DỰ ÁN</th>
                   <th>NHÀ MÁY</th>
