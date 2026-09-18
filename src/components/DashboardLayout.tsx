@@ -27,11 +27,13 @@ export default function DashboardLayout() {
           className="app-content"
           style={{
             flex: 1,
-            overflow: 'hidden',
+            overflowY: 'auto',
+            overflowX: 'hidden',
             minHeight: 0,
             padding: 'clamp(12px, 2vw, 24px)',
             display: 'flex',
             flexDirection: 'column',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           <Outlet />
