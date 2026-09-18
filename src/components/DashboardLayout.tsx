@@ -27,11 +27,11 @@ export default function DashboardLayout() {
           className="app-content"
           style={{
             flex: 1,
-            overflow: 'hidden',       // ← Đổi 'auto' → 'hidden'
+            overflow: 'hidden',
             minHeight: 0,
-            padding: '16px',           // ← Thêm padding
-            display: 'flex',           // ← Thêm
-            flexDirection: 'column',   // ← Thêm
+            padding: 'clamp(12px, 2vw, 24px)',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <Outlet />

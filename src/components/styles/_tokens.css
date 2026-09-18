@@ -23,7 +23,7 @@
   --sidebar-bg-end: #171f52;
   --sidebar-text: #c9cee8;
   --sidebar-text-active: #ffffff;
-  --shell-border: #f5c2d8;
+  --shell-border: transparent;
 
   /* Trang thai / uu tien badge */
   --status-good: #16a34a;
@@ -40,7 +40,7 @@
   --priority-low-bg: #e6effe;
   --priority-low-text: #3b5bdb;
 
-  --sidebar-width: 260px;
+  --sidebar-width: 200px;
   --sidebar-width-collapsed: 72px;
   --sidebar-width-mobile: 260px;
   --navbar-height: 60px;
