@@ -74,13 +74,16 @@
   overflow: hidden;
 }
 
+/* ✅ .app-content cho phép cuộn dọc — KHÔNG còn 'hidden' */
 .app-content {
   padding: 20px 24px;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .card-surface {
@@ -251,7 +254,7 @@
     transform: translateX(0);
   }
 
-  /* ✅ Container chính: cuộn dọc được */
+  /* ✅ Container chính trên mobile */
   .app-content {
     padding: 16px !important;
     padding-top: 72px !important;
@@ -263,14 +266,13 @@
     min-height: 0 !important;
   }
 
-  /* ✅ OVERRIDE MẠNH: Bỏ mọi giới hạn chiều cao con cháu */
+  /* ✅ OVERRIDE MẠNH */
   .app-content,
   .app-content * {
     max-height: none !important;
     min-height: 0 !important;
   }
 
-  /* ✅ Wrapper ngoài của các trang */
   .app-content > div {
     height: auto !important;
     min-height: 0 !important;
@@ -278,7 +280,6 @@
     display: block !important;
   }
 
-  /* ✅ Card surface + data table card → block */
   .app-content .data-table-card,
   .app-content .card-surface {
     height: auto !important;
@@ -288,7 +289,6 @@
     flex: none !important;
   }
 
-  /* ✅ Table wrapper: cho phép cuộn ngang, hiện hết nội dung dọc */
   .app-content .table-responsive-wrap {
     height: auto !important;
     max-height: none !important;
@@ -299,7 +299,6 @@
     min-height: 0 !important;
   }
 
-  /* ✅ Toolbar + legend xuống dòng */
   .data-table-toolbar {
     flex-direction: column;
     align-items: stretch !important;
@@ -315,34 +314,6 @@
   .data-table-toolbar select {
     max-width: 100% !important;
     flex: 1 1 100%;
-  }
-
-  /* ===== ✅ FIX RIÊNG CHO DASHBOARD ===== */
-  .dashboard-wrapper {
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-
-  .dashboard-wrapper > div {
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    flex: none !important;
-    display: block !important;
-  }
-
-  .dashboard-wrapper .card-surface,
-  .dashboard-wrapper .data-table-card,
-  .dashboard-wrapper .table-responsive-wrap {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    flex: none !important;
-    display: block !important;
   }
 }
 
@@ -377,7 +348,6 @@
     gap: 8px;
   }
 
-  /* Stats cards: full width */
   .app-content .col-md-3,
   .app-content .col-md-4,
   .app-content .col-md,
