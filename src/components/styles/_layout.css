@@ -251,7 +251,7 @@
     transform: translateX(0);
   }
 
-  /* ✅ Container chính: cuộn dọc được, không dùng flex nữa */
+  /* ✅ Container chính: cuộn dọc được */
   .app-content {
     padding: 16px !important;
     padding-top: 72px !important;
@@ -264,13 +264,13 @@
   }
 
   /* ✅ OVERRIDE MẠNH: Bỏ mọi giới hạn chiều cao con cháu */
-  .app-content *,
-  .app-content *::before,
-  .app-content *::after {
+  .app-content,
+  .app-content * {
     max-height: none !important;
+    min-height: 0 !important;
   }
 
-  /* ✅ Wrapper ngoài của các trang → block thường */
+  /* ✅ Wrapper ngoài của các trang */
   .app-content > div {
     height: auto !important;
     min-height: 0 !important;
@@ -278,7 +278,7 @@
     display: block !important;
   }
 
-  /* ✅ Data table card + card surface → block, không giới hạn */
+  /* ✅ Card surface + data table card → block */
   .app-content .data-table-card,
   .app-content .card-surface {
     height: auto !important;
@@ -311,17 +311,38 @@
     white-space: normal;
   }
 
-  /* ✅ Input/select full width */
   .data-table-toolbar input,
   .data-table-toolbar select {
     max-width: 100% !important;
     flex: 1 1 100%;
   }
 
-  /* ✅ Stats cards xếp dọc trên mobile nhỏ */
-  .app-content .row {
-    margin-left: 0;
-    margin-right: 0;
+  /* ===== ✅ FIX RIÊNG CHO DASHBOARD ===== */
+  .dashboard-wrapper {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .dashboard-wrapper > div {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    flex: none !important;
+    display: block !important;
+  }
+
+  .dashboard-wrapper .card-surface,
+  .dashboard-wrapper .data-table-card,
+  .dashboard-wrapper .table-responsive-wrap {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    flex: none !important;
+    display: block !important;
   }
 }
 

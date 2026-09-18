@@ -93,6 +93,7 @@ export default function DashboardPage() {
 
   return (
     <div
+      className="dashboard-wrapper"
       style={{
         height: '100%',
         display: 'flex',
