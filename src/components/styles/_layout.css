@@ -1,4 +1,4 @@
-/* ===== LAYOUT CHÍNH — CỐ ĐỊNH 100vh ===== */
+/* ===== LAYOUT CHÍNH — CỐ ĐỊNH 100vh (Desktop) ===== */
 .app-shell {
   display: flex;
   height: 100vh;
@@ -198,9 +198,7 @@
   padding: 32px;
 }
 
-/* ===== RESPONSIVE ===== */
-
-/* ✅ Nút hamburger */
+/* ===== NÚT HAMBURGER ===== */
 .sidebar-toggle {
   display: none;
   position: fixed;
@@ -228,7 +226,7 @@
   z-index: 1040;
 }
 
-/* Tablet & Mobile */
+/* ===== RESPONSIVE TABLET & MOBILE ===== */
 @media (max-width: 991px) {
   .sidebar-toggle {
     display: flex;
@@ -253,50 +251,85 @@
     transform: translateX(0);
   }
 
-  /* ✅ Padding-top để không bị nút hamburger che */
+  /* ✅ Container chính: cuộn dọc được, không dùng flex nữa */
   .app-content {
-    padding: 16px;
-    padding-top: 72px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* ✅ Cho phép con cuộn dọc trên mobile */
-  .app-content > * {
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
+    padding: 16px !important;
+    padding-top: 72px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
 
-  /* ✅ Riêng bảng cho phép cuộn ngang */
-  .app-content .table-responsive-wrap,
-  .app-content .data-table-card {
+  /* ✅ OVERRIDE MẠNH: Bỏ mọi giới hạn chiều cao con cháu */
+  .app-content *,
+  .app-content *::before,
+  .app-content *::after {
+    max-height: none !important;
+  }
+
+  /* ✅ Wrapper ngoài của các trang → block thường */
+  .app-content > div {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* ✅ Data table card + card surface → block, không giới hạn */
+  .app-content .data-table-card,
+  .app-content .card-surface {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    flex: none !important;
+  }
+
+  /* ✅ Table wrapper: cho phép cuộn ngang, hiện hết nội dung dọc */
+  .app-content .table-responsive-wrap {
+    height: auto !important;
+    max-height: none !important;
     overflow-x: auto !important;
+    overflow-y: visible !important;
+    display: block !important;
+    flex: none !important;
+    min-height: 0 !important;
   }
 
-  /* ✅ Legend xuống dòng */
+  /* ✅ Toolbar + legend xuống dòng */
+  .data-table-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
   .data-table-toolbar .legend {
     flex-wrap: wrap;
     margin-left: 0;
     white-space: normal;
   }
 
-  /* ✅ Input/select full width trên mobile */
+  /* ✅ Input/select full width */
   .data-table-toolbar input,
   .data-table-toolbar select {
     max-width: 100% !important;
     flex: 1 1 100%;
   }
+
+  /* ✅ Stats cards xếp dọc trên mobile nhỏ */
+  .app-content .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
-/* Mobile nhỏ */
+/* ===== MOBILE NHỎ ===== */
 @media (max-width: 576px) {
   .app-content {
-    padding: 12px;
-    padding-top: 68px;
+    padding: 12px !important;
+    padding-top: 68px !important;
   }
 
   .page-header {
@@ -321,5 +354,15 @@
   .data-table-toolbar {
     padding: 12px;
     gap: 8px;
+  }
+
+  /* Stats cards: full width */
+  .app-content .col-md-3,
+  .app-content .col-md-4,
+  .app-content .col-md,
+  .app-content .col-lg-5,
+  .app-content .col-lg-7 {
+    width: 100% !important;
+    flex: 1 1 100% !important;
   }
 }
