@@ -95,14 +95,13 @@ export default function DashboardPage() {
     <div
       className="dashboard-wrapper"
       style={{
-        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
         gap: '12px',
+        paddingBottom: '24px',
       }}
     >
-      <div className="page-header" style={{ flexShrink: 0 }}>
+      <div className="page-header">
         <div>
           <h1 className="h4">Tổng quan hoạt động Digital Team</h1>
           <p className="text-muted mb-0">
@@ -111,7 +110,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="row g-3" style={{ flexShrink: 0 }}>
+      <div className="row g-3">
         <div className="col-md">
           <div className="card-surface h-100">
             <div className="text-muted small">Tổng số dự án</div>
@@ -148,7 +147,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="row g-3" style={{ flexShrink: 0 }}>
+      <div className="row g-3">
         <div className="col-lg-7">
           <div className="card-surface h-100">
             <h6 className="mb-3">Tiến độ theo dự án chính</h6>
@@ -185,7 +184,7 @@ export default function DashboardPage() {
               <div className="text-muted small mb-2">Số dòng công việc theo mức hoàn thành</div>
             </div>
             
-            <div style={{ flex: 1, minHeight: '180px' }}>
+            <div style={{ flex: 1, minHeight: '220px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={statusDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
@@ -228,38 +227,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div
-        className="card-surface"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <h6 className="mb-3" style={{ flexShrink: 0 }}>Ưu tiên cao — chưa hoàn thành</h6>
+      <div className="card-surface">
+        <h6 className="mb-3">Ưu tiên cao — chưa hoàn thành</h6>
         {highPriorityIncomplete.length === 0 && <EmptyState message="Không có dự án ưu tiên cao nào đang chờ." />}
         {highPriorityIncomplete.length > 0 && (
-          <div
-            className="table-responsive-wrap"
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'auto',
-              minHeight: 0,
-            }}
-          >
+          <div className="table-responsive-wrap">
             <table className="table align-middle mb-0">
-              <thead
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  background: 'var(--card-bg, #1a1d2e)',
-                  color: 'var(--text-color, #ffffff)',
-                  zIndex: 10,
-                }}
-              >
+              <thead>
                 <tr>
                   <th>DỰ ÁN</th>
                   <th>NHÀ MÁY</th>
