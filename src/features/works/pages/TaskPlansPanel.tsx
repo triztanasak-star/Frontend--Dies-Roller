@@ -16,7 +16,12 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
   const deletePlan = useDeleteTaskPlan(workId);
   const [stepName, setStepName] = useState('');
 
-  const plans = useMemo(() => data?.documents ?? [], [data]);
+  // ✅ SẮP XẾP: taskplan tạo trước (id nhỏ) nằm trên
+  const plans = useMemo(() => {
+    const raw = data?.documents ?? [];
+    return [...raw].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+  }, [data]);
+
   const averagePercent = useMemo(() => {
     if (plans.length === 0) return null;
     return Math.round(plans.reduce((sum, p) => sum + p.progress_percent, 0) / plans.length);

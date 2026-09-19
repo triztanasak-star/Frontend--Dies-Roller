@@ -221,8 +221,15 @@ export default function WorksPage() {
                               const rawData = (work as any).plans || (work as any).task_plans || (work as any).milestones;
 
                               if (Array.isArray(rawData) && rawData.length > 0) {
-                                return rawData.map((p: any, idx: number) => (
-                                  <div key={idx} style={{ display: 'block', width: '100%', marginBottom: '4px' }}>
+                                // ✅ SẮP XẾP THEO ID TĂNG DẦN (taskplan tạo trước nằm trên)
+                                const sortedPlans = [...rawData].sort((a: any, b: any) => {
+                                  const idA = a.id ?? 0;
+                                  const idB = b.id ?? 0;
+                                  return idA - idB;
+                                });
+
+                                return sortedPlans.map((p: any, idx: number) => (
+                                  <div key={p.id || idx} style={{ display: 'block', width: '100%', marginBottom: '4px' }}>
                                     • <strong>{p.step_name || p.name}</strong>: {p.progress_percent ?? p.progress ?? 0}%
                                     <span className="text-muted ms-1">({p.status})</span>
                                   </div>
