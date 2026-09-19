@@ -16,8 +16,6 @@ import ProgressUpdateModal, { type ProgressUpdateModalHandle } from './ProgressU
 import WorkDetailModal from './WorkDetailModal';
 import { useQueryClient } from '@tanstack/react-query';
 
-const PRIORITY_LABEL: Record<string, string> = { high: 'High (H)', medium: 'Medium (M)', low: 'Low (L)' };
-
 function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
   if (percent >= 80) return 'good';
   if (percent >= 40) return 'warn';
@@ -187,13 +185,12 @@ export default function WorksPage() {
               <table className="table align-middle mb-0">
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg, #1a1d2e)', color: 'var(--text-color, #ffffff)', zIndex: 10 }}>
                   <tr>
-                    <th>NO.</th>
-                    <th>DỰ ÁN</th>
-                    <th>ƯU TIÊN</th>
-                    <th>NHÀ MÁY</th>
-                    <th style={{ minWidth: '450px', width: '45%' }}>TIẾN ĐỘ CẬP NHẬT</th>
-                    <th>TRẠNG THÁI (%)</th>
-                    <th />
+                    <th style={{ width: '45px', minWidth: '45px' }}>NO.</th>
+                    <th style={{ width: '150px', minWidth: '150px' }}>DỰ ÁN</th>
+                    <th style={{ width: '120px', minWidth: '120px' }}>NHÀ MÁY</th>
+                    <th style={{ minWidth: '550px', width: 'auto' }}>TIẾN ĐỘ CẬP NHẬT</th>
+                    <th style={{ width: '130px', minWidth: '130px' }}>TRẠNG THÁI (%)</th>
+                    <th style={{ width: '150px', minWidth: '150px' }} />
                   </tr>
                 </thead>
                 <tbody>
@@ -212,9 +209,13 @@ export default function WorksPage() {
                       <Fragment key={work.id}>
                         <tr>
                           <td>{index + 1}</td>
-                          <td className="fw-semibold">{work.task_name}</td>
-                          <td><span className={`badge-priority ${work.priority}`}>{PRIORITY_LABEL[work.priority]}</span></td>
-                          <td>{work.factory_name || '—'}</td>
+                          <td
+                            className="fw-semibold"
+                            style={{ width: '150px', minWidth: '150px', whiteSpace: 'normal', wordBreak: 'break-word' }}
+                          >
+                            {work.task_name}
+                          </td>
+                          <td style={{ whiteSpace: 'normal' }}>{work.factory_name || '—'}</td>
                           <td style={{ whiteSpace: 'normal' }}>
                             {(() => {
                               const rawData = (work as any).plans || (work as any).task_plans || (work as any).milestones;
@@ -297,7 +298,7 @@ export default function WorksPage() {
                         </tr>
                         {expandedId === work.id && (
                           <tr>
-                            <td colSpan={7} className="bg-light-subtle">
+                            <td colSpan={6} className="bg-light-subtle">
                               <TaskPlansPanel workId={work.id} canEdit={canUpdateProgress} />
                             </td>
                           </tr>
