@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, Fragment } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FiDownload, FiUpload, FiPlus, FiEdit2, FiTrash2, FiUserPlus, FiPaperclip } from 'react-icons/fi';
+import { FiDownload, FiUpload, FiPlus, FiEdit2, FiTrash2, FiUserPlus, FiEye } from 'react-icons/fi';
 import { useAuth } from '../../../context/AuthContext';
 import LoadingOverlay from '../../../components/LoadingOverlay';
 import ErrorState from '../../../components/ErrorState';
@@ -13,6 +13,7 @@ import { useCreateWork, useDeleteWork, useUpdateWork, useUpdateWorkProgress, use
 import TaskPlansPanel from './TaskPlansPanel';
 import WorkFormModal, { type WorkFormModalHandle, type WorkFormValues } from './WorkFormModal';
 import ProgressUpdateModal, { type ProgressUpdateModalHandle } from './ProgressUpdateModal';
+import WorkDetailModal from './WorkDetailModal';
 import { useQueryClient } from '@tanstack/react-query';
 
 const PRIORITY_LABEL: Record<string, string> = { high: 'High (H)', medium: 'Medium (M)', low: 'Low (L)' };
@@ -21,63 +22,6 @@ function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
   if (percent >= 80) return 'good';
   if (percent >= 40) return 'warn';
   return 'bad';
-}
-
-function WorkAttachmentsCell({ workId }: { workId: number }) {
-  const { data } = useQuery({
-    queryKey: ['work_attachments', workId],
-    queryFn: () => db.listAttachments(workId),
-  });
-
-  const attachments = data?.documents ?? [];
-
-  if (attachments.length === 0) {
-    return <span className="text-muted">—</span>;
-  }
-
-  const handleDownload = async (e: React.MouseEvent, fileUrl?: string, fileName?: string) => {
-    e.preventDefault();
-    if (!fileUrl) return;
-
-    try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName || 'document.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      window.open(fileUrl, '_blank');
-    }
-  };
-
-  return (
-    <div className="d-flex flex-column gap-1">
-      {attachments.map((file: any) => {
-        const fileUrl = file.url || file.file_path;
-
-        return (
-          <a
-            key={file.id}
-            href={fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => handleDownload(e, fileUrl, file.original_name)}
-            className="text-decoration-none small text-truncate d-flex align-items-center gap-1"
-            style={{ maxWidth: 140, cursor: 'pointer' }}
-            title={file.original_name}
-          >
-            <FiPaperclip size={12} /> {file.original_name}
-          </a>
-        );
-      })}
-    </div>
-  );
 }
 
 export default function WorksPage() {
@@ -100,6 +44,7 @@ export default function WorksPage() {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedWork, setSelectedWork] = useState<DigitalWork | null>(null);
 
   const formModalRef = useRef<WorkFormModalHandle>(null);
   const progressModalRef = useRef<ProgressUpdateModalHandle>(null);
@@ -142,10 +87,9 @@ export default function WorksPage() {
       estimated_saving_per_year: values.estimated_saving_per_year ? Number(values.estimated_saving_per_year) : null,
       payback_years: values.payback_years ? Number(values.payback_years) : null,
     };
-    
+
     if (editingId) {
       await updateWork.mutateAsync({ id: editingId, payload });
-      
       if (values.files && values.files.length > 0) {
         await db.uploadAttachments(editingId, values.files);
       }
@@ -179,14 +123,7 @@ export default function WorksPage() {
   };
 
   return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div className="page-header" style={{ flexShrink: 0 }}>
         <div>
           <h1 className="h4">Theo dõi dự án</h1>
@@ -201,13 +138,7 @@ export default function WorksPage() {
               <button type="button" className="btn btn-outline-primary" onClick={() => importInputRef.current?.click()}>
                 <FiUpload className="me-1" /> Nhập Excel
               </button>
-              <input
-                ref={importInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="d-none"
-                onChange={handleImportFile}
-              />
+              <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="d-none" onChange={handleImportFile} />
             </>
           )}
           <button type="button" className="btn btn-primary" onClick={() => formModalRef.current?.openCreate()}>
@@ -220,16 +151,7 @@ export default function WorksPage() {
       {isError && <ErrorState />}
 
       {!isLoading && !isError && (
-        <div
-          className="data-table-card"
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            overflow: 'hidden',
-          }}
-        >
+        <div className="data-table-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div className="data-table-toolbar" style={{ flexShrink: 0 }}>
             <input
               className="form-control"
@@ -261,36 +183,16 @@ export default function WorksPage() {
           {filtered.length === 0 && <EmptyState message="Không có dự án phù hợp." />}
 
           {filtered.length > 0 && (
-            <div
-              className="table-responsive-wrap"
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                overflowX: 'auto',
-                minHeight: 0,
-              }}
-            >
+            <div className="table-responsive-wrap" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0 }}>
               <table className="table align-middle mb-0">
-                <thead
-                  style={{
-                    position: 'sticky',
-                    top: 0,
-                    background: 'var(--card-bg, #1a1d2e)',
-                    color: 'var(--text-color, #ffffff)',
-                    zIndex: 10,
-                  }}
-                >
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg, #1a1d2e)', color: 'var(--text-color, #ffffff)', zIndex: 10 }}>
                   <tr>
                     <th>NO.</th>
                     <th>DỰ ÁN</th>
                     <th>ƯU TIÊN</th>
                     <th>NHÀ MÁY</th>
-                    <th>TIẾN ĐỘ CẬP NHẬT</th>
-                    <th>PIC</th>
-                    <th>HỖ TRỢ</th>
+                    <th style={{ minWidth: '450px', width: '45%' }}>TIẾN ĐỘ CẬP NHẬT</th>
                     <th>TRẠNG THÁI (%)</th>
-                    <th>HOÀN THÀNH DỰ KIẾN</th>
-                    <th>TÀI LIỆU</th>
                     <th />
                   </tr>
                 </thead>
@@ -298,7 +200,7 @@ export default function WorksPage() {
                   {filtered.map((work, index) => {
                     const bucket = progressBucket(work.progress_percent);
                     const barColor = bucket === 'good' ? 'var(--status-good)' : bucket === 'warn' ? 'var(--status-warn)' : 'var(--status-bad)';
-                    
+
                     const currentUserName = user?.name?.trim().toLowerCase() || '';
                     const leadProject = (work.lead_project || work.assigned_to_name || '').trim().toLowerCase();
                     const assistantName = (work.assistant || work.support_name || '').trim().toLowerCase();
@@ -313,19 +215,19 @@ export default function WorksPage() {
                           <td className="fw-semibold">{work.task_name}</td>
                           <td><span className={`badge-priority ${work.priority}`}>{PRIORITY_LABEL[work.priority]}</span></td>
                           <td>{work.factory_name || '—'}</td>
-                          <td style={{ minWidth: '320px', maxWidth: '420px', whiteSpace: 'normal' }}>
+                          <td style={{ whiteSpace: 'normal' }}>
                             {(() => {
                               const rawData = (work as any).plans || (work as any).task_plans || (work as any).milestones;
-                              
+
                               if (Array.isArray(rawData) && rawData.length > 0) {
                                 return rawData.map((p: any, idx: number) => (
                                   <div key={idx} style={{ display: 'block', width: '100%', marginBottom: '4px' }}>
-                                    • <strong>{p.step_name || p.name}</strong>: {p.progress_percent ?? p.progress ?? 0}% 
+                                    • <strong>{p.step_name || p.name}</strong>: {p.progress_percent ?? p.progress ?? 0}%
                                     <span className="text-muted ms-1">({p.status})</span>
                                   </div>
                                 ));
                               }
-                              
+
                               const textContent = typeof rawData === 'string' ? rawData : (work.progress_comment || '');
                               if (textContent.trim().length > 0) {
                                 const items = textContent.split(/\s*-\s+/).filter(Boolean);
@@ -339,19 +241,22 @@ export default function WorksPage() {
                               return <span className="text-muted">-</span>;
                             })()}
                           </td>
-                          <td>{work.lead_project || work.assigned_to_name || '—'}</td>
-                          <td>{work.assistant || work.support_name || '—'}</td>
                           <td>
                             <span className="status-progress-bar">
                               <div style={{ width: `${work.progress_percent}%`, background: barColor }} />
                             </span>
                             <span className={`status-badge ${bucket}`}>{work.progress_percent}</span>
                           </td>
-                          <td>{work.expected_deadline ? new Date(work.expected_deadline).toLocaleDateString('vi-VN') : '—'}</td>
-                          <td>
-                            <WorkAttachmentsCell workId={work.id} />
-                          </td>
                           <td className="text-end text-nowrap">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-link"
+                              title="Xem chi tiết"
+                              onClick={() => setSelectedWork(work)}
+                            >
+                              <FiEye />
+                            </button>
+
                             {isManagerOrAdmin && (
                               <button
                                 type="button"
@@ -377,7 +282,7 @@ export default function WorksPage() {
                             >
                               <FiEdit2 />
                             </button>
-                            
+
                             {isManagerOrAdmin && (
                               <button
                                 type="button"
@@ -392,7 +297,7 @@ export default function WorksPage() {
                         </tr>
                         {expandedId === work.id && (
                           <tr>
-                            <td colSpan={11} className="bg-light-subtle">
+                            <td colSpan={7} className="bg-light-subtle">
                               <TaskPlansPanel workId={work.id} canEdit={canUpdateProgress} />
                             </td>
                           </tr>
@@ -414,6 +319,8 @@ export default function WorksPage() {
         onSubmit={handleFormSubmit}
       />
       <ProgressUpdateModal ref={progressModalRef} isReviewer={isManagerOrAdmin} onSubmit={handleProgressSubmit} />
+
+      <WorkDetailModal work={selectedWork} onClose={() => setSelectedWork(null)} />
     </div>
   );
 }
