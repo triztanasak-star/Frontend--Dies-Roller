@@ -16,19 +16,17 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
   const deletePlan = useDeleteTaskPlan(workId);
 
   const [stepName, setStepName] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ✅ Auto-resize: textarea tự cao lên theo nội dung
+  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    // Reset chiều cao về auto để tính lại từ đầu
     el.style.height = 'auto';
-    // Set chiều cao mới bằng scrollHeight (không giới hạn)
     el.style.height = `${el.scrollHeight}px`;
   }, [stepName]);
 
-  // ✅ SẮP XẾP: taskplan tạo trước (id nhỏ) nằm trên
   const plans = useMemo(() => {
     const raw = data?.documents ?? [];
     return [...raw].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
@@ -42,9 +40,18 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
   const handleAdd = async (event: FormEvent) => {
     event.preventDefault();
     if (!stepName.trim()) return;
-    await createPlan.mutateAsync({ workId, payload: { step_name: stepName } });
+
+    await createPlan.mutateAsync({
+      workId,
+      payload: {
+        step_name: stepName,
+        // 👇 Chỉ gửi due_date khi có giá trị (Cách 2)
+        ...(dueDate && { due_date: dueDate }),
+      },
+    });
+
     setStepName('');
-    // Reset chiều cao sau khi thêm
+    setDueDate('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -55,13 +62,14 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="mb-0">Kế hoạch thực hiện (hạng mục)</h6>
         {averagePercent !== null && (
-          <span className="text-muted small">Tổng tiến độ trung bình: <strong>{averagePercent}%</strong></span>
+          <span className="text-muted small">
+            Tổng tiến độ trung bình: <strong>{averagePercent}%</strong>
+          </span>
         )}
       </div>
 
       {canEdit && (
         <form className="d-flex gap-2 mb-3 align-items-start" onSubmit={handleAdd}>
-          {/* ✅ TEXTAREA TỰ ĐỘNG GIÃN NỞ */}
           <textarea
             ref={textareaRef}
             className="form-control form-control-sm"
@@ -70,16 +78,28 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
             onChange={(e) => setStepName(e.target.value)}
             rows={1}
             style={{
-              resize: 'none',        // Không cho user kéo tay (vì đã auto-resize)
-              overflow: 'hidden',    // Ẩn scrollbar dọc
-              minHeight: '31px',     // Chiều cao tối thiểu = chiều cao input
+              resize: 'none',
+              overflow: 'hidden',
+              minHeight: '31px',
               lineHeight: '1.5',
               paddingTop: '4px',
               paddingBottom: '4px',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
+              flex: 1,
             }}
           />
+
+          {/* 👇 INPUT DATE TRONG FORM THÊM MỚI */}
+          <input
+            type="date"
+            className="form-control form-control-sm"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            style={{ width: 150, flexShrink: 0 }}
+            title="Ngày hoàn thành dự kiến"
+          />
+
           <button
             type="submit"
             className="btn btn-sm btn-primary"
@@ -99,6 +119,29 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
           <li key={plan.id} className="list-group-item d-flex justify-content-between align-items-center gap-2">
             <span className="flex-grow-1">{plan.step_name}</span>
             <div className="d-flex gap-2 align-items-center">
+
+              {/* 👇 INPUT DATE TRONG TỪNG DÒNG */}
+              <input
+                type="date"
+                className="form-control form-control-sm"
+                style={{ width: 150 }}
+                defaultValue={plan.due_date || ''}
+                disabled={!canEdit}
+                title="Ngày hoàn thành dự kiến"
+                onBlur={(e) => {
+                  const value = e.target.value;
+                  if (value !== (plan.due_date || '')) {
+                    // 👇 Cách 2: Chỉ gửi due_date khi có giá trị
+                    updatePlan.mutate({
+                      id: plan.id,
+                      payload: {
+                        ...(value ? { due_date: value } : {}),
+                      },
+                    });
+                  }
+                }}
+              />
+
               <input
                 type="number"
                 min={0}
@@ -119,14 +162,21 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
                 className="form-select form-select-sm"
                 value={plan.status}
                 disabled={!canEdit}
-                onChange={(e) => updatePlan.mutate({ id: plan.id, payload: { status: e.target.value as TaskPlan['status'] } })}
+                onChange={(e) => updatePlan.mutate({
+                  id: plan.id,
+                  payload: { status: e.target.value as TaskPlan['status'] },
+                })}
               >
                 {Object.entries(STATUS_LABEL).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
               {canEdit && (
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => deletePlan.mutate(plan.id)}>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-danger"
+                  onClick={() => deletePlan.mutate(plan.id)}
+                >
                   Xoá
                 </button>
               )}
