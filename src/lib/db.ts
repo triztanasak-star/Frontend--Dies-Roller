@@ -29,6 +29,7 @@ export interface MilestoneItem {
   name: string;
   progress: number;
   status: string;
+  dueDate?: string; // 👈 ĐÃ THÊM: hạn hoàn thành của hạng mục (camelCase cho frontend)
 }
 
 export interface DigitalWork {

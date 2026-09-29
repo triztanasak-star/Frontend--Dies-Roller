@@ -39,6 +39,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
 
     const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
     const [newMilestoneName, setNewMilestoneName] = useState('');
+    const [newMilestoneDueDate, setNewMilestoneDueDate] = useState(''); // 👈 State cho due date của hạng mục mới
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const showFinanceSection = true;
@@ -69,6 +70,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
             status: p.status === 'done' || p.status === 'Hoàn thành' ? 'Hoàn thành' 
                     : p.status === 'in_progress' || p.status === 'Đang thực hiện' ? 'Đang thực hiện' 
                     : 'Chưa bắt đầu',
+            dueDate: p.due_date ? String(p.due_date).split('T')[0] : '', // 👈 Map due_date từ API -> dueDate (cắt phần giờ)
           }));
           setMilestones(loadedPlans);
         } catch (error) {
@@ -125,6 +127,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           step_name: newMilestoneName.trim(),
           step_order: milestones.length + 1,
           progress_percent: 0,
+          due_date: newMilestoneDueDate || undefined, // 👈 Gửi due_date lên API
         });
 
         const newItem: MilestoneItem = {
@@ -132,11 +135,13 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           name: createdPlan.step_name || newMilestoneName.trim(),
           progress: createdPlan.progress_percent ?? 0,
           status: 'Chưa bắt đầu',
+          dueDate: createdPlan.due_date ? String(createdPlan.due_date).split('T')[0] : (newMilestoneDueDate || ''), // 👈 Lưu dueDate vào state
         };
 
         const updated = [...milestones, newItem];
         setMilestones(updated);
         setNewMilestoneName('');
+        setNewMilestoneDueDate(''); // 👈 Reset ô ngày sau khi thêm
         calculateAndUpdateFromMilestones(updated);
       } catch (error) {
         console.error("Lỗi khi thêm hạng mục:", error);
@@ -187,6 +192,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
               step_name: target.name,
               progress_percent: Number(target.progress),
               status: apiStatus,
+              due_date: target.dueDate || null, // 👈 Gửi due_date lên API (null nếu rỗng)
             });
           }
         } catch (error) {
@@ -256,6 +262,14 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
             background: rgba(30, 41, 59, 0.4) !important;
             border-color: rgba(148, 163, 184, 0.15) !important;
           }
+
+          /* 👈 Style cho date input để đồng bộ theme sáng/tối */
+          .progress-modal-input[type="date"] {
+            color-scheme: light dark;
+          }
+          [data-theme="dark"] .progress-modal-input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+          }
         `}</style>
 
         <div className="modal-dialog modal-lg">
@@ -277,6 +291,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                       </span>
                     </div>
                     
+                    {/* 👈 Thêm ô nhập ngày cho hạng mục mới */}
                     <div className="d-flex gap-2 mb-3 align-items-start">
                       <textarea
                         className="form-control progress-modal-input"
@@ -290,6 +305,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                           lineHeight: '1.5',
                           whiteSpace: 'pre-wrap',
                           wordWrap: 'break-word',
+                          flex: 1,
                         }}
                         onChange={(e) => setNewMilestoneName(e.target.value)}
                         onInput={(e: any) => {
@@ -303,6 +319,14 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                             (e.target as HTMLTextAreaElement).style.height = 'auto';
                           }
                         }}
+                      />
+                      <input
+                        type="date"
+                        className="form-control progress-modal-input"
+                        style={{ height: '38px', width: '160px', flexShrink: 0 }}
+                        value={newMilestoneDueDate}
+                        onChange={(e) => setNewMilestoneDueDate(e.target.value)}
+                        title="Hạn hoàn thành (tùy chọn)"
                       />
                       <button
                         type="button"
@@ -326,7 +350,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                               className="form-control form-control-sm progress-modal-input"
                               value={item.name}
                               rows={1}
-                              style={{ resize: 'none', overflow: 'hidden', minHeight: '31px', lineHeight: '1.4' }}
+                              style={{ resize: 'none', overflow: 'hidden', minHeight: '31px', lineHeight: '1.4', flex: 1 }}
                               onInput={(e: any) => {
                                 e.target.style.height = 'auto';
                                 e.target.style.height = e.target.scrollHeight + 'px';
@@ -334,7 +358,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                               onChange={(e) => handleUpdateMilestone(item.id, 'name', e.target.value)}
                               placeholder="Tên hạng mục"
                             />
-                            <div className="input-group input-group-sm" style={{ width: '150px' }}>
+                            <div className="input-group input-group-sm" style={{ width: '120px', flexShrink: 0 }}>
                               <input
                                 type="number"
                                 className="form-control text-center progress-modal-input"
@@ -349,9 +373,20 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                                 borderColor: 'var(--border-color, rgba(148,163,184,0.25))',
                               }}>%</span>
                             </div>
+
+                            {/* 👈 Ô nhập ngày cho từng hạng mục */}
+                            <input
+                              type="date"
+                              className="form-control form-control-sm progress-modal-input"
+                              style={{ width: '150px', flexShrink: 0 }}
+                              value={item.dueDate || ''}
+                              onChange={(e) => handleUpdateMilestone(item.id, 'dueDate', e.target.value)}
+                              title="Hạn hoàn thành"
+                            />
+
                             <select
                               className="form-select form-select-sm progress-modal-input"
-                              style={{ width: '140px' }}
+                              style={{ width: '140px', flexShrink: 0 }}
                               value={item.status}
                               onChange={(e) => handleUpdateMilestone(item.id, 'status', e.target.value)}
                             >
@@ -363,6 +398,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                               type="button"
                               className="btn btn-sm btn-outline-danger px-3"
                               onClick={() => handleDeleteMilestone(item.id)}
+                              style={{ flexShrink: 0 }}
                             >
                               Xóa
                             </button>
