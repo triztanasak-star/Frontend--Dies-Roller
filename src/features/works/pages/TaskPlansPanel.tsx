@@ -16,7 +16,7 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
   const deletePlan = useDeleteTaskPlan(workId);
 
   const [stepName, setStepName] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState('');  // 👈 STATE NGÀY
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -45,8 +45,7 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
       workId,
       payload: {
         step_name: stepName,
-        // 👇 Chỉ gửi due_date khi có giá trị (Cách 2)
-        ...(dueDate && { due_date: dueDate }),
+        ...(dueDate && { due_date: dueDate }),  // 👈 CHỈ GỬI KHI CÓ NGÀY
       },
     });
 
@@ -90,7 +89,7 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
             }}
           />
 
-          {/* 👇 INPUT DATE TRONG FORM THÊM MỚI */}
+          {/* 👇 INPUT DATE - FORM THÊM MỚI */}
           <input
             type="date"
             className="form-control form-control-sm"
@@ -120,7 +119,7 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
             <span className="flex-grow-1">{plan.step_name}</span>
             <div className="d-flex gap-2 align-items-center">
 
-              {/* 👇 INPUT DATE TRONG TỪNG DÒNG */}
+              {/* 👇 INPUT DATE - MỖI DÒNG */}
               <input
                 type="date"
                 className="form-control form-control-sm"
@@ -131,7 +130,6 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
                 onBlur={(e) => {
                   const value = e.target.value;
                   if (value !== (plan.due_date || '')) {
-                    // 👇 Cách 2: Chỉ gửi due_date khi có giá trị
                     updatePlan.mutate({
                       id: plan.id,
                       payload: {
