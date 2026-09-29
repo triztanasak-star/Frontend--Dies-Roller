@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, Fragment } from 'react';
+import { useMemo, useRef, useState, Fragment, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FiDownload, FiUpload, FiPlus, FiEdit2, FiTrash2, FiUserPlus, FiEye } from 'react-icons/fi';
@@ -22,7 +22,7 @@ function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
   return 'bad';
 }
 
-// 👈 Helper format ngày dd/MM/yyyy từ chuỗi ISO
+// 👈 Helper format ngày dd/MM/yyyy
 function formatDueDate(dateStr?: string | null): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -33,7 +33,7 @@ function formatDueDate(dateStr?: string | null): string {
   return `${day}/${month}/${year}`;
 }
 
-// 👈 Helper kiểm tra quá hạn (so với hôm nay)
+// 👈 Helper kiểm tra quá hạn
 function isOverdue(dateStr?: string | null, status?: string): boolean {
   if (!dateStr) return false;
   if (status === 'Hoàn thành' || status === 'done') return false;
@@ -42,6 +42,13 @@ function isOverdue(dateStr?: string | null, status?: string): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return d.getTime() < today.getTime();
+}
+
+// 👈 Map status từ API (pending/in_progress/done) -> tiếng Việt
+function mapStatusVN(apiStatus?: string): string {
+  if (apiStatus === 'done' || apiStatus === 'Hoàn thành') return 'Hoàn thành';
+  if (apiStatus === 'in_progress' || apiStatus === 'Đang thực hiện') return 'Đang thực hiện';
+  return 'Chưa bắt đầu';
 }
 
 export default function WorksPage() {
@@ -66,11 +73,50 @@ export default function WorksPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedWork, setSelectedWork] = useState<DigitalWork | null>(null);
 
+  // 👈 State lưu plans theo workId
+  const [plansByWork, setPlansByWork] = useState<Record<number, any[]>>({});
+  const [loadingPlans, setLoadingPlans] = useState<Record<number, boolean>>({});
+
   const formModalRef = useRef<WorkFormModalHandle>(null);
   const progressModalRef = useRef<ProgressUpdateModalHandle>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const works = useMemo(() => data?.documents ?? [], [data]);
+
+  // 👈 Tự động fetch plans cho tất cả works khi load danh sách
+  useEffect(() => {
+    if (works.length === 0) return;
+
+    let cancelled = false;
+    const loading: Record<number, boolean> = {};
+    works.forEach(w => { loading[w.id] = true; });
+    setLoadingPlans({ ...loading });
+
+    const fetchAll = async () => {
+      const results: Record<number, any[]> = {};
+
+      await Promise.all(
+        works.map(async (w) => {
+          try {
+            const res: any = await db.listTaskPlans(w.id);
+            const rawList = Array.isArray(res) ? res : (res?.documents || res?.data || []);
+            results[w.id] = rawList;
+          } catch (e) {
+            console.error(`Lỗi tải plans cho work ${w.id}:`, e);
+            results[w.id] = [];
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setPlansByWork(results);
+        setLoadingPlans({});
+      }
+    };
+
+    fetchAll();
+    return () => { cancelled = true; };
+  }, [works]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -126,6 +172,15 @@ export default function WorksPage() {
 
   const handleProgressSubmit = async (workId: number, values: Parameters<typeof db.updateWorkProgress>[1]) => {
     await updateProgress.mutateAsync({ id: workId, payload: values });
+
+    // 👈 Sau khi lưu modal, reload plans của work này để cập nhật due date
+    try {
+      const res: any = await db.listTaskPlans(workId);
+      const rawList = Array.isArray(res) ? res : (res?.documents || res?.data || []);
+      setPlansByWork(prev => ({ ...prev, [workId]: rawList }));
+    } catch (e) {
+      console.error('Lỗi reload plans sau khi lưu:', e);
+    }
   };
 
   const handleExport = () => {
@@ -227,6 +282,10 @@ export default function WorksPage() {
                     const isOwner = Boolean(currentUserName) && (leadProject === currentUserName || assistantName === currentUserName);
                     const canUpdateProgress = isOwner || isManagerOrAdmin;
 
+                    // 👈 Ưu tiên plans từ state (fetch riêng), fallback về work.plans
+                    const plans = plansByWork[work.id] || (work as any).plans || (work as any).task_plans || (work as any).milestones;
+                    const isLoadingPlan = loadingPlans[work.id];
+
                     return (
                       <Fragment key={work.id}>
                         <tr>
@@ -240,20 +299,24 @@ export default function WorksPage() {
                           <td style={{ whiteSpace: 'normal' }}>{work.factory_name || '—'}</td>
                           <td style={{ whiteSpace: 'normal' }}>
                             {(() => {
-                              const rawData = (work as any).plans || (work as any).task_plans || (work as any).milestones;
+                              // 👈 Đang load
+                              if (isLoadingPlan && (!Array.isArray(plans) || plans.length === 0)) {
+                                return <span className="text-muted small">Đang tải hạng mục…</span>;
+                              }
 
-                              if (Array.isArray(rawData) && rawData.length > 0) {
-                                // ✅ SẮP XẾP THEO ID TĂNG DẦN (taskplan tạo trước nằm trên)
-                                const sortedPlans = [...rawData].sort((a: any, b: any) => {
+                              // 👈 Có plans array → render với due_date
+                              if (Array.isArray(plans) && plans.length > 0) {
+                                const sortedPlans = [...plans].sort((a: any, b: any) => {
                                   const idA = a.id ?? 0;
                                   const idB = b.id ?? 0;
                                   return idA - idB;
                                 });
 
                                 return sortedPlans.map((p: any, idx: number) => {
-                                  const dueRaw = p.due_date || p.dueDate || null; // 👈 Lấy due_date từ API
+                                  const dueRaw = p.due_date || p.dueDate || null;
                                   const dueText = formatDueDate(dueRaw);
-                                  const overdue = isOverdue(dueRaw, p.status);
+                                  const statusVN = mapStatusVN(p.status);
+                                  const overdue = isOverdue(dueRaw, statusVN);
 
                                   return (
                                     <div
@@ -270,10 +333,9 @@ export default function WorksPage() {
                                       <span style={{ flex: '1 1 auto', minWidth: 0 }}>
                                         • <strong>{p.step_name || p.name}</strong>:{' '}
                                         {p.progress_percent ?? p.progress ?? 0}%
-                                        <span className="text-muted ms-1">({p.status})</span>
+                                        <span className="text-muted ms-1">({statusVN})</span>
                                       </span>
 
-                                      {/* 👈 Hiển thị hạn hoàn thành */}
                                       {dueText && (
                                         <span
                                           title={overdue ? 'Đã quá hạn' : 'Hạn hoàn thành'}
@@ -300,7 +362,8 @@ export default function WorksPage() {
                                 });
                               }
 
-                              const textContent = typeof rawData === 'string' ? rawData : (work.progress_comment || '');
+                              // 👈 Fallback: hiển thị progress_comment text cũ
+                              const textContent = typeof plans === 'string' ? plans : (work.progress_comment || '');
                               if (textContent.trim().length > 0) {
                                 const items = textContent.split(/\s*-\s+/).filter(Boolean);
                                 return items.map((item, idx) => (
