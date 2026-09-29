@@ -22,6 +22,28 @@ function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
   return 'bad';
 }
 
+// 👈 Helper format ngày dd/MM/yyyy từ chuỗi ISO
+function formatDueDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// 👈 Helper kiểm tra quá hạn (so với hôm nay)
+function isOverdue(dateStr?: string | null, status?: string): boolean {
+  if (!dateStr) return false;
+  if (status === 'Hoàn thành' || status === 'done') return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d.getTime() < today.getTime();
+}
+
 export default function WorksPage() {
   const queryClient = useQueryClient();
   const { user, can } = useAuth();
@@ -228,12 +250,54 @@ export default function WorksPage() {
                                   return idA - idB;
                                 });
 
-                                return sortedPlans.map((p: any, idx: number) => (
-                                  <div key={p.id || idx} style={{ display: 'block', width: '100%', marginBottom: '4px' }}>
-                                    • <strong>{p.step_name || p.name}</strong>: {p.progress_percent ?? p.progress ?? 0}%
-                                    <span className="text-muted ms-1">({p.status})</span>
-                                  </div>
-                                ));
+                                return sortedPlans.map((p: any, idx: number) => {
+                                  const dueRaw = p.due_date || p.dueDate || null; // 👈 Lấy due_date từ API
+                                  const dueText = formatDueDate(dueRaw);
+                                  const overdue = isOverdue(dueRaw, p.status);
+
+                                  return (
+                                    <div
+                                      key={p.id || idx}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '6px',
+                                        width: '100%',
+                                        marginBottom: '4px',
+                                        flexWrap: 'wrap',
+                                      }}
+                                    >
+                                      <span style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                        • <strong>{p.step_name || p.name}</strong>:{' '}
+                                        {p.progress_percent ?? p.progress ?? 0}%
+                                        <span className="text-muted ms-1">({p.status})</span>
+                                      </span>
+
+                                      {/* 👈 Hiển thị hạn hoàn thành */}
+                                      {dueText && (
+                                        <span
+                                          title={overdue ? 'Đã quá hạn' : 'Hạn hoàn thành'}
+                                          style={{
+                                            fontSize: '0.75rem',
+                                            padding: '1px 6px',
+                                            borderRadius: '4px',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0,
+                                            background: overdue
+                                              ? 'rgba(239, 68, 68, 0.15)'
+                                              : 'rgba(148, 163, 184, 0.15)',
+                                            color: overdue ? '#ef4444' : 'var(--text-muted, #94a3b8)',
+                                            border: `1px solid ${overdue ? 'rgba(239, 68, 68, 0.35)' : 'rgba(148, 163, 184, 0.25)'}`,
+                                            fontWeight: overdue ? 600 : 400,
+                                          }}
+                                        >
+                                          {overdue ? '⚠ ' : '📅 '}
+                                          {dueText}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                });
                               }
 
                               const textContent = typeof rawData === 'string' ? rawData : (work.progress_comment || '');
