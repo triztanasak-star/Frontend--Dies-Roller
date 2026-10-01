@@ -26,12 +26,12 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
     const modalRef = useRef<HTMLDivElement>(null);
     const [workId, setWorkId] = useState<number | null>(null);
     const [taskName, setTaskName] = useState('');
-    
+
     const [form, setForm] = useState<ProgressFormValues>({
-      status: 0, 
-      progress_percent: 0, 
-      progress_comment: '', 
-      manager_comment: '', 
+      status: 0,
+      progress_percent: 0,
+      progress_comment: '',
+      manager_comment: '',
       capex_amount: null,
       estimated_saving_per_year: null,
       payback_years: null,
@@ -39,7 +39,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
 
     const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
     const [newMilestoneName, setNewMilestoneName] = useState('');
-    const [newMilestoneDueDate, setNewMilestoneDueDate] = useState(''); // 👈 State cho due date của hạng mục mới
+    const [newMilestoneDueDate, setNewMilestoneDueDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const showFinanceSection = true;
@@ -62,15 +62,15 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
         try {
           const res: any = await listTaskPlans(work.id);
           const rawList = Array.isArray(res) ? res : (res?.documents || res?.data || []);
-          
+
           const loadedPlans = rawList.map((p: any) => ({
             id: p.id,
             name: p.step_name || p.name,
             progress: p.progress_percent ?? p.progress ?? 0,
-            status: p.status === 'done' || p.status === 'Hoàn thành' ? 'Hoàn thành' 
-                    : p.status === 'in_progress' || p.status === 'Đang thực hiện' ? 'Đang thực hiện' 
+            status: p.status === 'done' || p.status === 'Hoàn thành' ? 'Hoàn thành'
+                    : p.status === 'in_progress' || p.status === 'Đang thực hiện' ? 'Đang thực hiện'
                     : 'Chưa bắt đầu',
-            dueDate: p.due_date ? String(p.due_date).split('T')[0] : '', // 👈 Map due_date từ API -> dueDate (cắt phần giờ)
+            dueDate: p.due_date ? String(p.due_date).split('T')[0] : '',
           }));
           setMilestones(loadedPlans);
         } catch (error) {
@@ -127,7 +127,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           step_name: newMilestoneName.trim(),
           step_order: milestones.length + 1,
           progress_percent: 0,
-          due_date: newMilestoneDueDate || undefined, // 👈 Gửi due_date lên API
+          due_date: newMilestoneDueDate || undefined,
         });
 
         const newItem: MilestoneItem = {
@@ -135,13 +135,13 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           name: createdPlan.step_name || newMilestoneName.trim(),
           progress: createdPlan.progress_percent ?? 0,
           status: 'Chưa bắt đầu',
-          dueDate: createdPlan.due_date ? String(createdPlan.due_date).split('T')[0] : (newMilestoneDueDate || ''), // 👈 Lưu dueDate vào state
+          dueDate: createdPlan.due_date ? String(createdPlan.due_date).split('T')[0] : (newMilestoneDueDate || ''),
         };
 
         const updated = [...milestones, newItem];
         setMilestones(updated);
         setNewMilestoneName('');
-        setNewMilestoneDueDate(''); // 👈 Reset ô ngày sau khi thêm
+        setNewMilestoneDueDate('');
         calculateAndUpdateFromMilestones(updated);
       } catch (error) {
         console.error("Lỗi khi thêm hạng mục:", error);
@@ -192,7 +192,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
               step_name: target.name,
               progress_percent: Number(target.progress),
               status: apiStatus,
-              due_date: target.dueDate || null, // 👈 Gửi due_date lên API (null nếu rỗng)
+              due_date: target.dueDate || null,
             });
           }
         } catch (error) {
@@ -226,46 +226,77 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
     return (
       <div className="modal fade" ref={modalRef} tabIndex={-1} aria-hidden="true">
         <style>{`
-          /* ✅ Ô input trong modal tự động theo theme */
+          /* ===== LIGHT MODE (mặc định) ===== */
           .progress-modal-input {
-            background: var(--input-bg, rgba(148, 163, 184, 0.08)) !important;
-            color: var(--text-color, #e5e7eb) !important;
-            border: 1px solid var(--border-color, rgba(148, 163, 184, 0.25)) !important;
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+            border: 1px solid #d1d5db !important;
           }
           .progress-modal-input:focus {
-            background: var(--input-bg, rgba(148, 163, 184, 0.12)) !important;
-            color: var(--text-color, #e5e7eb) !important;
-            border-color: var(--primary-color, #3b82f6) !important;
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+            border-color: #3b82f6 !important;
             box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
           }
           .progress-modal-input::placeholder {
-            color: var(--text-muted, #94a3b8) !important;
-            opacity: 0.7;
+            color: #9ca3af !important;
+            opacity: 1;
           }
+
+          /* Ô input-group-text (dấu %) */
+          .input-group-text {
+            background-color: #f3f4f6 !important;
+            color: #1f2937 !important;
+            border-color: #d1d5db !important;
+          }
+
+          /* Row hạng mục */
           .progress-milestone-row {
-            background: var(--milestone-bg, rgba(148, 163, 184, 0.08)) !important;
-            border: 1px solid var(--border-color, rgba(148, 163, 184, 0.2)) !important;
+            background-color: #f8fafc !important;
+            border: 1px solid #e5e7eb !important;
             border-radius: 6px;
           }
           .progress-milestone-empty {
-            background: var(--milestone-bg, rgba(148, 163, 184, 0.05)) !important;
-            border: 1px solid var(--border-color, rgba(148, 163, 184, 0.15)) !important;
+            background-color: #f9fafb !important;
+            border: 1px solid #e5e7eb !important;
           }
 
-          /* Dark mode override */
+          /* Date input light */
+          .progress-modal-input[type="date"] {
+            color-scheme: light;
+          }
+
+          /* ===== DARK MODE ===== */
           [data-theme="dark"] .progress-modal-input {
-            background: rgba(30, 41, 59, 0.6) !important;
+            background-color: rgba(30, 41, 59, 0.6) !important;
+            color: #e5e7eb !important;
+            border-color: rgba(148, 163, 184, 0.25) !important;
+          }
+          [data-theme="dark"] .progress-modal-input:focus {
+            background-color: rgba(30, 41, 59, 0.6) !important;
+            color: #e5e7eb !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+          }
+          [data-theme="dark"] .progress-modal-input::placeholder {
+            color: #94a3b8 !important;
+            opacity: 0.7;
+          }
+          [data-theme="dark"] .input-group-text {
+            background-color: rgba(30, 41, 59, 0.6) !important;
             color: #e5e7eb !important;
             border-color: rgba(148, 163, 184, 0.25) !important;
           }
           [data-theme="dark"] .progress-milestone-row {
-            background: rgba(30, 41, 59, 0.4) !important;
+            background-color: rgba(30, 41, 59, 0.4) !important;
             border-color: rgba(148, 163, 184, 0.15) !important;
           }
-
-          /* 👈 Style cho date input để đồng bộ theme sáng/tối */
-          .progress-modal-input[type="date"] {
-            color-scheme: light dark;
+          [data-theme="dark"] .progress-milestone-empty {
+            background-color: rgba(30, 41, 59, 0.3) !important;
+            border-color: rgba(148, 163, 184, 0.15) !important;
+          }
+          [data-theme="dark"] .progress-modal-input[type="date"] {
+            color-scheme: dark;
           }
           [data-theme="dark"] .progress-modal-input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
@@ -281,7 +312,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
               </div>
               <div className="modal-body">
                 <div className="row g-3">
-                  
+
                   {/* KẾ HOẠCH THỰC HIỆN (HẠNG MỤC) */}
                   <div className="col-12">
                     <div className="d-flex justify-content-between align-items-center mb-2">
@@ -290,8 +321,8 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                         Tổng tiến độ trung bình: {form.progress_percent}%
                       </span>
                     </div>
-                    
-                    {/* 👈 Thêm ô nhập ngày cho hạng mục mới */}
+
+                    {/* Thêm ô nhập ngày cho hạng mục mới */}
                     <div className="d-flex gap-2 mb-3 align-items-start">
                       <textarea
                         className="form-control progress-modal-input"
@@ -367,14 +398,10 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                                 max={100}
                                 onChange={(e) => handleUpdateMilestone(item.id, 'progress', e.target.value)}
                               />
-                              <span className="input-group-text" style={{
-                                background: 'var(--input-bg, rgba(148,163,184,0.08))',
-                                color: 'var(--text-color, #e5e7eb)',
-                                borderColor: 'var(--border-color, rgba(148,163,184,0.25))',
-                              }}>%</span>
+                              <span className="input-group-text">%</span>
                             </div>
 
-                            {/* 👈 Ô nhập ngày cho từng hạng mục */}
+                            {/* Ô nhập ngày cho từng hạng mục */}
                             <input
                               type="date"
                               className="form-control form-control-sm progress-modal-input"
@@ -415,7 +442,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                         <hr className="my-2" />
                         <h6 className="text-muted mb-3">Thông tin quản lý & tài chính</h6>
                       </div>
-                      
+
                       <div className="col-md-4">
                         <label className="form-label">CAPEX (VND)</label>
                         <input
@@ -439,7 +466,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                       <div className="col-md-4">
                         <label className="form-label">Thời gian hoàn vốn (năm)</label>
                         <input
-                          type="number" 
+                          type="number"
                           step="0.1"
                           className="form-control progress-modal-input"
                           value={form.payback_years ?? ''}
