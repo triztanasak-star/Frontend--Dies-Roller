@@ -1,8 +1,8 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 
-//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 // Access token giu in-memory (khong localStorage) - tranh XSS doc duoc token.
 // Refresh token nam trong httpOnly cookie, backend tu quan ly qua withCredentials.
