@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWorks } from '../../works/hooks/useWorks';
 
 export default function FinancePage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
   const workResult = useWorks();
 
   // Tự động quét mảng dữ liệu
@@ -55,18 +58,18 @@ export default function FinancePage() {
   const formatCurrency = (amount: number) => {
     if (!amount || isNaN(amount)) return '—';
     if (amount >= 1e9) {
-      return `${(amount / 1e9).toFixed(2)} tỷ`;
+      return `${(amount / 1e9).toFixed(2)} ${t('finance.units.billion')}`;
     }
-    return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+    return `${new Intl.NumberFormat(locale).format(amount)} ${t('finance.units.currency')}`;
   };
 
   const formatRawNumber = (amount: number) => {
     if (!amount || isNaN(amount)) return '';
-    return new Intl.NumberFormat('vi-VN').format(amount) + ' đ/năm';
+    return `${new Intl.NumberFormat(locale).format(amount)} ${t('finance.units.currencyPerYear')}`;
   };
 
   if (loading) {
-    return <div className="p-4">Đang tải dữ liệu tài chính...</div>;
+    return <div className="p-4">{t('finance.loading')}</div>;
   }
 
   return (
@@ -163,15 +166,15 @@ export default function FinancePage() {
       <div className="row g-3" style={{ flexShrink: 0 }}>
         <div className="col-md-3">
           <div className="card-surface h-100">
-            <span className="text-muted small fw-bold text-uppercase">Tổng vốn đầu tư (CAPEX)</span>
+            <span className="text-muted small fw-bold text-uppercase">{t('finance.totalCapex')}</span>
             <h3 className="fw-bold mt-2 mb-1">{formatCurrency(stats.totalCapex)}</h3>
-            <span className="text-muted small">{formatRawNumber(stats.totalCapex).replace('/năm', '')}</span>
+            <span className="text-muted small">{`${new Intl.NumberFormat(locale).format(stats.totalCapex)} ${t('finance.units.currency')}`}</span>
           </div>
         </div>
 
         <div className="col-md-3">
           <div className="card-surface h-100">
-            <span className="text-muted small fw-bold text-uppercase">Tổng tiết kiệm / năm</span>
+            <span className="text-muted small fw-bold text-uppercase">{t('finance.totalSavingPerYear')}</span>
             <h3 className="fw-bold mt-2 mb-1" style={{ color: '#0284c7' }}>
               {formatCurrency(stats.totalSaving)}
             </h3>
@@ -181,21 +184,21 @@ export default function FinancePage() {
 
         <div className="col-md-3">
           <div className="card-surface h-100">
-            <span className="text-muted small fw-bold text-uppercase">Thời gian hoàn vốn</span>
+            <span className="text-muted small fw-bold text-uppercase">{t('finance.paybackTime')}</span>
             <h3 className="fw-bold mt-2 mb-1" style={{ color: '#16a34a' }}>
-              {stats.paybackPeriod} năm
+              {stats.paybackPeriod} {t('finance.units.years')}
             </h3>
-            <span className="text-muted small">Capex ÷ Saving/năm</span>
+            <span className="text-muted small">{t('finance.capexDivSaving')}</span>
           </div>
         </div>
 
         <div className="col-md-3">
           <div className="card-surface h-100">
-            <span className="text-muted small fw-bold text-uppercase">Tiết kiệm tích lũy (5 năm)</span>
+            <span className="text-muted small fw-bold text-uppercase">{t('finance.accumulatedSaving5y')}</span>
             <h3 className="fw-bold mt-2 mb-1" style={{ color: '#0284c7' }}>
               {formatCurrency(stats.cumulativeSaving5Years)}
             </h3>
-            <span className="text-muted small">Chưa trừ Capex</span>
+            <span className="text-muted small">{t('finance.beforeCapex')}</span>
           </div>
         </div>
       </div>
@@ -216,8 +219,8 @@ export default function FinancePage() {
           className="d-flex justify-content-between align-items-center"
           style={{ flexShrink: 0, padding: '16px 20px', borderBottom: '1px solid rgba(148, 163, 184, 0.2)' }}
         >
-          <h5 className="mb-0 fw-bold">Danh sách Capex & Saving</h5>
-          <span className="text-muted small">{works.length} khoản mục</span>
+          <h5 className="mb-0 fw-bold">{t('finance.listTitle')}</h5>
+          <span className="text-muted small">{t('finance.itemCount', { count: works.length })}</span>
         </div>
 
         <div
@@ -237,11 +240,11 @@ export default function FinancePage() {
               }}
             >
               <tr>
-                <th className="ps-3" style={{ width: '28%' }}>HẠNG MỤC / DỰ ÁN</th>
-                <th style={{ width: '13%' }}>CAPEX (VND)</th>
-                <th style={{ width: '14%' }}>SAVING (VND) / NĂM</th>
-                <th className="text-center" style={{ width: '10%' }}>HOÀN VỐN</th>
-                <th className="pe-3" style={{ width: '35%' }}>LỢI ÍCH KHÁC</th>
+                <th className="ps-3" style={{ width: '28%' }}>{t('finance.columns.item')}</th>
+                <th style={{ width: '13%' }}>{t('finance.columns.capex')}</th>
+                <th style={{ width: '14%' }}>{t('finance.columns.saving')}</th>
+                <th className="text-center" style={{ width: '10%' }}>{t('finance.columns.payback')}</th>
+                <th className="pe-3" style={{ width: '35%' }}>{t('finance.columns.otherBenefit')}</th>
               </tr>
             </thead>
             <tbody>
@@ -259,25 +262,25 @@ export default function FinancePage() {
                 return (
                   <tr key={work.id || index}>
                     <td className="ps-3 cell-name">
-                      {work.task_name || work.name || 'Không có tên'}{' '}
+                      {work.task_name || work.name || t('finance.noName')}{' '}
                       {work.factory_name ? `(${work.factory_name})` : ''}
                     </td>
                     <td className="cell-capex">
                       {capexVal ? (
-                        new Intl.NumberFormat('vi-VN').format(capexVal)
+                        new Intl.NumberFormat(locale).format(capexVal)
                       ) : (
                         <span className="cell-empty">—</span>
                       )}
                     </td>
                     <td className="cell-saving">
                       {savingVal ? (
-                        new Intl.NumberFormat('vi-VN').format(savingVal)
+                        new Intl.NumberFormat(locale).format(savingVal)
                       ) : (
                         <span className="cell-empty">—</span>
                       )}
                     </td>
                     <td className="text-center cell-payback">
-                      {paybackVal ? `${paybackVal} năm` : <span className="cell-empty">—</span>}
+                      {paybackVal ? `${paybackVal} ${t('finance.units.years')}` : <span className="cell-empty">—</span>}
                     </td>
                     <td className="pe-3 cell-benefit">
                       {benefits || <span className="cell-empty">—</span>}
@@ -288,7 +291,7 @@ export default function FinancePage() {
               {works.length === 0 && (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-muted">
-                    Chưa có dữ liệu dự án nào.
+                    {t('finance.noData')}
                   </td>
                 </tr>
               )}

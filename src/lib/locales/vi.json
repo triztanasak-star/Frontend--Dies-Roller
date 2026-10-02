@@ -1,0 +1,327 @@
+{
+  "common": {
+    "noData": "Chưa có dữ liệu.",
+    "error": "Có lỗi xảy ra, vui lòng thử lại.",
+    "loading": "Đang tải...",
+    "authenticating": "Đang xác thực...",
+    "backHome": "Về trang chủ",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "delete": "Xoá",
+    "edit": "Sửa",
+    "create": "Tạo mới",
+    "lock": "Khoá",
+    "unlock": "Mở khóa",
+    "status": {
+      "pending": "Chưa bắt đầu",
+      "in_progress": "Đang thực hiện",
+      "done": "Hoàn thành"
+    },
+    "priority": {
+      "high": "High (H)",
+      "medium": "Medium (M)",
+      "low": "Low (L)"
+    },
+    "workflow": {
+      "requested": "Yêu cầu",
+      "approved": "Đã duyệt",
+      "in_progress": "Thực hiện",
+      "completed": "Hoàn thành"
+    },
+    "factories": {
+      "tienGiang": "Nhà máy Tiền Giang",
+      "dongNai": "Nhà máy Đồng Nai",
+      "bauXeo": "Nhà máy Bàu Xéo",
+      "binhPhuoc": "Nhà máy Bình Phước",
+      "binhDuong": "Nhà máy Bình Dương",
+      "binhDinh": "Nhà máy Bình Định",
+      "haiDuong": "Nhà máy Hải Dương",
+      "xuanMai": "Nhà máy Xuân Mai"
+    },
+    "language": "Ngôn ngữ"
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Trang không tồn tại",
+    "message": "Đường dẫn bạn truy cập không hợp lệ hoặc đã bị xóa."
+  },
+  "forbidden": {
+    "code": "403",
+    "title": "Không có quyền truy cập",
+    "message": "Bạn không có quyền xem trang này."
+  },
+  "sidebar": {
+    "dashboard": "Tổng quan",
+    "works": "Theo dõi dự án",
+    "finance": "Phân tích tài chính",
+    "admin": "Quản trị",
+    "users": "Người dùng",
+    "lightMode": "Giao diện sáng",
+    "darkMode": "Giao diện tối",
+    "logout": "Đăng xuất",
+    "toggleMenu": "Toggle menu",
+    "roles": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "user": "User"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập Digital Work",
+      "registerSuccess": "Đăng ký thành công, vui lòng đăng nhập.",
+      "invalidCredentials": "Email hoặc mật khẩu không đúng.",
+      "email": "Email",
+      "password": "Mật khẩu",
+      "submit": "Đăng nhập",
+      "submitting": "Đang đăng nhập...",
+      "noAccount": "Chưa có tài khoản?",
+      "registerNow": "Đăng ký ngay"
+    },
+    "register": {
+      "title": "Đăng ký tài khoản Digital Work",
+      "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự.",
+      "passwordMismatch": "Mật khẩu xác nhận không khớp.",
+      "emailInUse": "Email này đã được sử dụng.",
+      "failed": "Đăng ký thất bại, vui lòng thử lại.",
+      "name": "Họ tên",
+      "email": "Email",
+      "password": "Mật khẩu",
+      "confirmPassword": "Xác nhận mật khẩu",
+      "passwordHint": "Ít nhất 8 ký tự.",
+      "submit": "Đăng ký",
+      "submitting": "Đang đăng ký...",
+      "haveAccount": "Đã có tài khoản?",
+      "loginNow": "Đăng nhập"
+    }
+  },
+  "dashboard": {
+    "title": "Tổng quan hoạt động Digital Team",
+    "subtitle": "{{count}} dự án đang theo dõi",
+    "totalWorks": "Tổng số dự án",
+    "statusSummary": "{{done}} hoàn thành · {{inProgress}} đang chạy · {{notStarted}} chưa bắt đầu",
+    "avgProgress": "Tiến độ trung bình",
+    "acrossAllWorks": "Trên toàn bộ công việc",
+    "totalCapex": "Tổng vốn đầu tư (CAPEX)",
+    "estimatedSaving": "Tiết kiệm ước tính / năm",
+    "paybackTime": "Thời gian hoàn vốn",
+    "progressByMainWorks": "Tiến độ theo dự án chính",
+    "noWorks": "Chưa có dự án nào.",
+    "statusDistribution": "Phân bố theo trạng thái",
+    "rowsByCompletion": "Số dòng công việc theo mức hoàn thành",
+    "highPriorityPending": "Ưu tiên cao — chưa hoàn thành",
+    "noHighPriorityPending": "Không có dự án ưu tiên cao nào đang chờ.",
+    "columns": {
+      "project": "DỰ ÁN",
+      "factory": "NHÀ MÁY",
+      "pic": "PIC",
+      "progress": "TIẾN ĐỘ",
+      "percent": "%"
+    }
+  },
+  "finance": {
+    "loading": "Đang tải dữ liệu tài chính...",
+    "totalCapex": "TỔNG VỐN ĐẦU TƯ (CAPEX)",
+    "totalSavingPerYear": "TỔNG TIẾT KIỆM / NĂM",
+    "paybackTime": "THỜI GIAN HOÀN VỐN",
+    "capexDivSaving": "Capex ÷ Saving/năm",
+    "accumulatedSaving5y": "TIẾT KIỆM TÍCH LŨY (5 NĂM)",
+    "beforeCapex": "Chưa trừ Capex",
+    "listTitle": "Danh sách Capex & Saving",
+    "itemCount": "{{count}} khoản mục",
+    "columns": {
+      "item": "HẠNG MỤC / DỰ ÁN",
+      "capex": "CAPEX (VND)",
+      "saving": "SAVING (VND) / NĂM",
+      "payback": "HOÀN VỐN",
+      "otherBenefit": "LỢI ÍCH KHÁC"
+    },
+    "noName": "Không có tên",
+    "noData": "Chưa có dữ liệu dự án nào.",
+    "units": {
+      "billion": "tỷ",
+      "currency": "đ",
+      "currencyPerYear": "đ/năm",
+      "years": "năm"
+    }
+  },
+  "projects": {
+    "title": "Dự án",
+    "name": "Tên dự án",
+    "description": "Mô tả",
+    "create": "Tạo mới",
+    "noProjects": "Chưa có dự án nào.",
+    "columns": {
+      "name": "Tên dự án",
+      "status": "Trạng thái",
+      "createdAt": "Ngày tạo"
+    },
+    "viewWorks": "Xem công việc"
+  },
+  "users": {
+    "title": "Người dùng",
+    "name": "Họ tên",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "role": "Quyền",
+    "roleOptions": {
+      "user": "User",
+      "manager": "Manager",
+      "admin": "Admin"
+    },
+    "create": "Tạo mới",
+    "noUsers": "Chưa có người dùng.",
+    "columns": {
+      "name": "Họ tên",
+      "email": "Email",
+      "role": "Quyền",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "save": "Lưu",
+    "lock": "Khoá",
+    "unlock": "Mở khóa"
+  },
+  "works": {
+    "title": "Theo dõi dự án",
+    "subtitle": "Danh sách dự án Digital theo nhà máy",
+    "exportExcel": "Xuất Excel",
+    "addWork": "Thêm dự án",
+    "sendRequest": "Gửi yêu cầu",
+    "searchPlaceholder": "Tìm theo tên dự án, nhà máy",
+    "filters": {
+      "allPriority": "Tất cả mức ưu tiên",
+      "allStatus": "Tất cả trạng thái",
+      "allWorkflow": "Tất cả tình trạng",
+      "picSupportPlaceholder": "Tất cả PIC / Support",
+      "expectedDeadline": "Hoàn thành dự kiến",
+      "expectedDeadlineCount": "Hoàn thành dự kiến ({{count}})",
+      "all": "Tất cả",
+      "noDeadlineData": "Không có dữ liệu ngày.",
+      "statusGood": "≥ 80%",
+      "statusWarn": "40 – 80%",
+      "statusBad": "< 40%"
+    },
+    "legend": {
+      "good": "≥80%",
+      "warn": "40–80%",
+      "bad": "<40%",
+      "rows": "{{filtered}} / {{total}} dòng"
+    },
+    "noMatch": "Không có dự án phù hợp.",
+    "columns": {
+      "no": "NO.",
+      "project": "DỰ ÁN",
+      "image": "HÌNH ẢNH",
+      "factory": "NHÀ MÁY",
+      "progressUpdate": "TIẾN ĐỘ CẬP NHẬT",
+      "statusPercent": "TRẠNG THÁI (%)"
+    },
+    "loadingMilestones": "Đang tải hạng mục…",
+    "overdue": "Đã quá hạn",
+    "dueDate": "Hạn hoàn thành",
+    "actions": {
+      "viewDetail": "Xem chi tiết",
+      "assign": "Giao công việc",
+      "updateProgress": "Cập nhật tiến độ",
+      "delete": "Xoá"
+    },
+    "afterWorkImageAlt": "Hình ảnh sau làm"
+  },
+  "workForm": {
+    "titleAssign": "Giao công việc",
+    "titleEdit": "Sửa dự án",
+    "titleCreate": "Thêm dự án",
+    "taskName": "Tên công việc *",
+    "factory": "Nhà máy",
+    "factoryPlaceholder": "Nhập hoặc chọn",
+    "priority": "Mức ưu tiên",
+    "description": "Mô tả chi tiết",
+    "representativeName": "Người đại diện",
+    "email": "Email",
+    "phone": "Sđt",
+    "expectedDeadline": "Deadline mong muốn",
+    "attachment": "File PDF / hình ảnh đính kèm",
+    "pic": "PIC",
+    "picPlaceholder": "Chọn hoặc nhập tên PIC...",
+    "support": "Support",
+    "supportPlaceholder": "Chọn hoặc nhập tên Support...",
+    "cancel": "Hủy",
+    "submitApprove": "Duyệt",
+    "submitApproving": "Đang duyệt...",
+    "submitSave": "Lưu",
+    "submitSaving": "Đang lưu...",
+    "submitRequest": "Yêu cầu",
+    "submitRequesting": "Đang gửi..."
+  },
+  "workDetail": {
+    "title": "Chi tiết dự án: {{name}}",
+    "generalInfo": "Thông tin chung",
+    "additionalInfo": "Thông tin bổ sung",
+    "detailedProgress": "Tiến độ cập nhật chi tiết",
+    "project": "Dự án",
+    "factory": "Nhà máy",
+    "priority": "Ưu tiên",
+    "statusPercent": "Trạng thái (%)",
+    "pic": "PIC (Người phụ trách chính)",
+    "support": "Hỗ trợ",
+    "expectedDeadline": "Hoàn thành dự kiến",
+    "attachments": "Tài liệu đính kèm",
+    "afterWorkImages": "Hình ảnh sau làm",
+    "noImages": "— Không có hình ảnh",
+    "noAttachments": "— Không có tài liệu",
+    "noProgressUpdate": "— Chưa có cập nhật tiến độ",
+    "close": "Đóng"
+  },
+  "progress": {
+    "title": "Cập nhật tiến độ — {{name}}",
+    "planSection": "Kế hoạch thực hiện (hạng mục)",
+    "avgProgress": "Tổng tiến độ trung bình: {{percent}}%",
+    "addMilestonePlaceholder": "Thêm hạng mục mới...",
+    "dueDateOptional": "Hạn hoàn thành (tùy chọn)",
+    "add": "Thêm",
+    "noMilestones": "Chưa có hạng mục nào.",
+    "milestoneNamePlaceholder": "Tên hạng mục",
+    "dueDate": "Hạn hoàn thành",
+    "delete": "Xóa",
+    "financeSection": "Thông tin quản lý & tài chính",
+    "capex": "CAPEX (VND)",
+    "estimatedSaving": "Tiết kiệm ước tính/năm (VND)",
+    "paybackYears": "Thời gian hoàn vốn (năm)",
+    "otherBenefit": "Lợi ích khác",
+    "supportRequest": "Thông tin cần hỗ trợ",
+    "afterWorkImages": "Hình ảnh sau làm",
+    "cancel": "Hủy",
+    "accept": "Chấp nhận",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "close": "Đóng"
+  },
+  "taskPlans": {
+    "planSection": "Kế hoạch thực hiện (hạng mục)",
+    "avgProgress": "Tổng tiến độ trung bình: {{percent}}%",
+    "addPlaceholder": "Thêm hạng mục mới...",
+    "dueDateTitle": "Ngày hoàn thành dự kiến",
+    "add": "Thêm",
+    "loading": "Đang tải kế hoạch...",
+    "noMilestones": "Chưa có hạng mục nào.",
+    "delete": "Xoá"
+  },
+  "excel": {
+    "sheetName": "Dự án",
+    "columns": {
+      "no": "NO.",
+      "project": "Dự án",
+      "priority": "Ưu tiên",
+      "factory": "Nhà máy",
+      "progressUpdate": "Tiến độ cập nhật",
+      "pic": "PIC",
+      "support": "Hỗ trợ",
+      "statusPercent": "Trạng thái (%)",
+      "status": "Trạng thái",
+      "expectedDeadline": "Hoàn thành dự kiến"
+    }
+  }
+}

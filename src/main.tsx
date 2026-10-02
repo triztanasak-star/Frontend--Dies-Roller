@@ -10,6 +10,7 @@ import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
 
 import './components/style.css'
+import './lib/i18n'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(

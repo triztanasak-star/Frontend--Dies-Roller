@@ -1,14 +1,17 @@
 import { forwardRef, useImperativeHandle, useRef, useState, type FormEvent } from 'react';
-import { listTaskPlans, createTaskPlan, updateTaskPlan, deleteTaskPlan, type DigitalWork, type MilestoneItem } from '../../../lib/db';
+import { useTranslation } from 'react-i18next';
+import { listTaskPlans, createTaskPlan, updateTaskPlan, deleteTaskPlan, uploadAttachments, type DigitalWork, type MilestoneItem } from '../../../lib/db';
 
 export interface ProgressFormValues {
   status: number;
   progress_percent: number;
   progress_comment: string;
   manager_comment: string;
+  support_request: string;
   capex_amount: number | null;
   estimated_saving_per_year: number | null;
   payback_years: number | null;
+  workflow_status: 'requested' | 'approved' | 'in_progress' | 'completed';
 }
 
 export interface ProgressUpdateModalHandle {
@@ -23,6 +26,7 @@ interface ProgressUpdateModalProps {
 
 const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdateModalProps>(
   ({ onSubmit }, ref) => {
+    const { t } = useTranslation();
     const modalRef = useRef<HTMLDivElement>(null);
     const [workId, setWorkId] = useState<number | null>(null);
     const [taskName, setTaskName] = useState('');
@@ -32,14 +36,17 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
       progress_percent: 0,
       progress_comment: '',
       manager_comment: '',
+      support_request: '',
       capex_amount: null,
       estimated_saving_per_year: null,
       payback_years: null,
+      workflow_status: 'requested',
     });
 
     const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
     const [newMilestoneName, setNewMilestoneName] = useState('');
     const [newMilestoneDueDate, setNewMilestoneDueDate] = useState('');
+    const [afterWorkImages, setAfterWorkImages] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const showFinanceSection = true;
@@ -48,15 +55,18 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
       open: async (work: DigitalWork) => {
         setWorkId(work.id);
         setTaskName(work.task_name || '');
+        setAfterWorkImages([]);
 
         setForm({
           status: work.status ?? 0,
           progress_percent: work.progress_percent ?? 0,
           progress_comment: work.progress_comment ?? '',
           manager_comment: work.manager_comment ?? '',
+          support_request: work.support_request ?? '',
           capex_amount: work.capex_amount !== null && work.capex_amount !== undefined ? Number(work.capex_amount) : null,
           estimated_saving_per_year: work.estimated_saving_per_year !== null && work.estimated_saving_per_year !== undefined ? Number(work.estimated_saving_per_year) : null,
           payback_years: work.payback_years !== null && work.payback_years !== undefined ? Number(work.payback_years) : null,
+          workflow_status: work.workflow_status ?? 'requested',
         });
 
         try {
@@ -211,13 +221,31 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           progress_percent: form.progress_percent,
           progress_comment: form.progress_comment,
           manager_comment: form.manager_comment,
+          support_request: form.support_request,
           capex_amount: form.capex_amount,
           estimated_saving_per_year: form.estimated_saving_per_year,
           payback_years: form.payback_years,
         };
 
         await onSubmit(workId, payload);
+
+        if (afterWorkImages.length > 0) {
+          await uploadAttachments(workId, afterWorkImages, 'after_work');
+        }
+
         handleClose();
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    // 👈 Chấp nhận công việc: chuyển trạng thái quy trình sang "Thực hiện"
+    const handleAccept = async () => {
+      if (workId === null) return;
+      setIsSubmitting(true);
+      try {
+        await onSubmit(workId, { workflow_status: 'in_progress' });
+        setForm((prev) => ({ ...prev, workflow_status: 'in_progress' }));
       } finally {
         setIsSubmitting(false);
       }
@@ -307,8 +335,8 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
           <div className="modal-content">
             <form onSubmit={handleSubmit}>
               <div className="modal-header">
-                <h5 className="modal-title">Cập nhật tiến độ — {taskName}</h5>
-                <button type="button" className="btn-close" onClick={handleClose} aria-label="Đóng" />
+                <h5 className="modal-title">{t('progress.title', { name: taskName })}</h5>
+                <button type="button" className="btn-close" onClick={handleClose} aria-label={t('progress.close')} />
               </div>
               <div className="modal-body">
                 <div className="row g-3">
@@ -316,9 +344,9 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                   {/* KẾ HOẠCH THỰC HIỆN (HẠNG MỤC) */}
                   <div className="col-12">
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <label className="form-label fw-bold m-0">Kế hoạch thực hiện (hạng mục)</label>
+                      <label className="form-label fw-bold m-0">{t('progress.planSection')}</label>
                       <span className="text-muted small fw-semibold">
-                        Tổng tiến độ trung bình: {form.progress_percent}%
+                        {t('progress.avgProgress', { percent: form.progress_percent })}
                       </span>
                     </div>
 
@@ -326,7 +354,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                     <div className="d-flex gap-2 mb-3 align-items-start">
                       <textarea
                         className="form-control progress-modal-input"
-                        placeholder="Thêm hạng mục mới..."
+                        placeholder={t('progress.addMilestonePlaceholder')}
                         value={newMilestoneName}
                         rows={1}
                         style={{
@@ -357,7 +385,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                         style={{ height: '38px', width: '160px', flexShrink: 0 }}
                         value={newMilestoneDueDate}
                         onChange={(e) => setNewMilestoneDueDate(e.target.value)}
-                        title="Hạn hoàn thành (tùy chọn)"
+                        title={t('progress.dueDateOptional')}
                       />
                       <button
                         type="button"
@@ -365,14 +393,14 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                         onClick={handleAddMilestone}
                         style={{ height: '38px', flexShrink: 0 }}
                       >
-                        Thêm
+                        {t('progress.add')}
                       </button>
                     </div>
 
                     <div className="d-flex flex-column gap-2" style={{ maxHeight: '250px', overflowY: 'auto' }}>
                       {milestones.length === 0 ? (
                         <div className="text-muted text-center py-2 progress-milestone-empty small">
-                          Chưa có hạng mục nào.
+                          {t('progress.noMilestones')}
                         </div>
                       ) : (
                         milestones.map((item) => (
@@ -387,7 +415,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                                 e.target.style.height = e.target.scrollHeight + 'px';
                               }}
                               onChange={(e) => handleUpdateMilestone(item.id, 'name', e.target.value)}
-                              placeholder="Tên hạng mục"
+                              placeholder={t('progress.milestoneNamePlaceholder')}
                             />
                             <div className="input-group input-group-sm" style={{ width: '120px', flexShrink: 0 }}>
                               <input
@@ -408,7 +436,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                               style={{ width: '150px', flexShrink: 0 }}
                               value={item.dueDate || ''}
                               onChange={(e) => handleUpdateMilestone(item.id, 'dueDate', e.target.value)}
-                              title="Hạn hoàn thành"
+                              title={t('progress.dueDate')}
                             />
 
                             <select
@@ -417,9 +445,9 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                               value={item.status}
                               onChange={(e) => handleUpdateMilestone(item.id, 'status', e.target.value)}
                             >
-                              <option value="Chưa bắt đầu">Chưa bắt đầu</option>
-                              <option value="Đang thực hiện">Đang thực hiện</option>
-                              <option value="Hoàn thành">Hoàn thành</option>
+                              <option value="Chưa bắt đầu">{t('common.status.pending')}</option>
+                              <option value="Đang thực hiện">{t('common.status.in_progress')}</option>
+                              <option value="Hoàn thành">{t('common.status.done')}</option>
                             </select>
                             <button
                               type="button"
@@ -427,7 +455,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                               onClick={() => handleDeleteMilestone(item.id)}
                               style={{ flexShrink: 0 }}
                             >
-                              Xóa
+                              {t('progress.delete')}
                             </button>
                           </div>
                         ))
@@ -440,11 +468,11 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                     <>
                       <div className="col-12 mt-4">
                         <hr className="my-2" />
-                        <h6 className="text-muted mb-3">Thông tin quản lý & tài chính</h6>
+                        <h6 className="text-muted mb-3">{t('progress.financeSection')}</h6>
                       </div>
 
                       <div className="col-md-4">
-                        <label className="form-label">CAPEX (VND)</label>
+                        <label className="form-label">{t('progress.capex')}</label>
                         <input
                           type="number"
                           step="0.01"
@@ -454,7 +482,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">Tiết kiệm ước tính/năm (VND)</label>
+                        <label className="form-label">{t('progress.estimatedSaving')}</label>
                         <input
                           type="number"
                           step="0.01"
@@ -464,7 +492,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="form-label">Thời gian hoàn vốn (năm)</label>
+                        <label className="form-label">{t('progress.paybackYears')}</label>
                         <input
                           type="number"
                           step="0.1"
@@ -475,7 +503,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                       </div>
 
                       <div className="col-12">
-                        <label className="form-label">Lợi ích khác</label>
+                        <label className="form-label">{t('progress.otherBenefit')}</label>
                         <textarea
                           className="form-control progress-modal-input"
                           style={{ minHeight: '85px', resize: 'vertical' }}
@@ -488,14 +516,48 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                           }}
                         />
                       </div>
+
+                      <div className="col-md-6">
+                        <label className="form-label">{t('progress.supportRequest')}</label>
+                        <textarea
+                          className="form-control progress-modal-input"
+                          style={{ minHeight: '85px', resize: 'vertical' }}
+                          value={form.support_request}
+                          onChange={(e) => setForm({ ...form, support_request: e.target.value })}
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = 'auto';
+                            target.style.height = `${target.scrollHeight}px`;
+                          }}
+                        />
+                      </div>
+
+                      <div className="col-md-6">
+                        <label className="form-label">{t('progress.afterWorkImages')}</label>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          multiple
+                          className="form-control progress-modal-input"
+                          onChange={(e) => {
+                            const fileList = e.target.files;
+                            setAfterWorkImages(fileList ? Array.from(fileList) : []);
+                          }}
+                        />
+                      </div>
                     </>
                   )}
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={handleClose}>Hủy</button>
+                <button type="button" className="btn btn-secondary" onClick={handleClose}>{t('progress.cancel')}</button>
+                {form.workflow_status === 'approved' && (
+                  <button type="button" className="btn btn-success" disabled={isSubmitting} onClick={handleAccept}>
+                    {t('progress.accept')}
+                  </button>
+                )}
                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+                  {isSubmitting ? t('progress.saving') : t('progress.save')}
                 </button>
               </div>
             </form>

@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/dashboard', { replace: true });
     } catch {
-      setError('Email hoặc mật khẩu không đúng.');
+      setError(t('auth.login.invalidCredentials'));
     } finally {
       setIsSubmitting(false);
     }
@@ -35,16 +37,16 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1 className="h4 mb-4 text-center">Đăng nhập Digital Work</h1>
+        <h1 className="h4 mb-4 text-center">{t('auth.login.title')}</h1>
         {locationState?.registered && !error && (
           <div className="alert alert-success" role="alert">
-            Đăng ký thành công, vui lòng đăng nhập.
+            {t('auth.login.registerSuccess')}
           </div>
         )}
         {error && <div className="alert alert-danger" role="alert">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label" htmlFor="email">Email</label>
+            <label className="form-label" htmlFor="email">{t('auth.login.email')}</label>
             <input
               id="email"
               type="email"
@@ -55,7 +57,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="mb-4">
-            <label className="form-label" htmlFor="password">Mật khẩu</label>
+            <label className="form-label" htmlFor="password">{t('auth.login.password')}</label>
             <input
               id="password"
               type="password"
@@ -66,11 +68,11 @@ export default function LoginPage() {
             />
           </div>
           <button type="submit" className="btn btn-primary w-100" disabled={isSubmitting}>
-            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {isSubmitting ? t('auth.login.submitting') : t('auth.login.submit')}
           </button>
         </form>
         <p className="text-center mt-3 mb-0 text-muted">
-          Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+          {t('auth.login.noAccount')} <Link to="/register">{t('auth.login.registerNow')}</Link>
         </p>
       </div>
     </div>

@@ -1,14 +1,16 @@
 import { useMemo, useRef, useState, Fragment, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FiDownload, FiUpload, FiPlus, FiEdit2, FiTrash2, FiUserPlus, FiEye } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import { FiDownload, FiPlus, FiEdit2, FiTrash2, FiUserPlus, FiEye } from 'react-icons/fi';
 import { useAuth } from '../../../context/AuthContext';
 import LoadingOverlay from '../../../components/LoadingOverlay';
 import ErrorState from '../../../components/ErrorState';
 import EmptyState from '../../../components/EmptyState';
+import LanguageSwitcher from '../../../components/LanguageSwitcher';
 import * as db from '../../../lib/db';
-import type { DigitalWork } from '../../../lib/db';
-import { exportWorksToExcel, parseWorksExcelFile } from '../../../lib/excel';
+import type { DigitalWork, WorkAttachment } from '../../../lib/db';
+import { exportWorksToExcel } from '../../../lib/excel';
 import { useCreateWork, useDeleteWork, useUpdateWork, useUpdateWorkProgress, useWorks } from '../hooks/useWorks';
 import TaskPlansPanel from './TaskPlansPanel';
 import WorkFormModal, { type WorkFormModalHandle, type WorkFormValues } from './WorkFormModal';
@@ -34,9 +36,8 @@ function formatDueDate(dateStr?: string | null): string {
 }
 
 // 👈 Helper kiểm tra quá hạn
-function isOverdue(dateStr?: string | null, status?: string): boolean {
-  if (!dateStr) return false;
-  if (status === 'Hoàn thành' || status === 'done') return false;
+function isOverdue(dateStr?: string | null, isDone?: boolean): boolean {
+  if (!dateStr || isDone) return false;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return false;
   const today = new Date();
@@ -44,14 +45,15 @@ function isOverdue(dateStr?: string | null, status?: string): boolean {
   return d.getTime() < today.getTime();
 }
 
-// 👈 Map status từ API (pending/in_progress/done) -> tiếng Việt
-function mapStatusVN(apiStatus?: string): string {
-  if (apiStatus === 'done' || apiStatus === 'Hoàn thành') return 'Hoàn thành';
-  if (apiStatus === 'in_progress' || apiStatus === 'Đang thực hiện') return 'Đang thực hiện';
-  return 'Chưa bắt đầu';
+// 👈 Map status từ API (pending/in_progress/done) -> key i18n
+function mapStatusKey(apiStatus?: string): 'done' | 'in_progress' | 'pending' {
+  if (apiStatus === 'done' || apiStatus === 'Hoàn thành') return 'done';
+  if (apiStatus === 'in_progress' || apiStatus === 'Đang thực hiện') return 'in_progress';
+  return 'pending';
 }
 
 export default function WorksPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user, can } = useAuth();
   const [searchParams] = useSearchParams();
@@ -71,15 +73,23 @@ export default function WorksPage() {
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [picFilter, setPicFilter] = useState('');
+  const [workflowFilter, setWorkflowFilter] = useState('');
+  const [selectedDeadlines, setSelectedDeadlines] = useState<string[]>([]);
+  const [deadlineMenuOpen, setDeadlineMenuOpen] = useState(false);
+  const deadlineMenuRef = useRef<HTMLDivElement>(null);
   const [selectedWork, setSelectedWork] = useState<DigitalWork | null>(null);
 
   // 👈 State lưu plans theo workId
   const [plansByWork, setPlansByWork] = useState<Record<number, any[]>>({});
   const [loadingPlans, setLoadingPlans] = useState<Record<number, boolean>>({});
 
+  // 👈 State lưu attachments (ảnh sau làm) theo workId
+  const [attachmentsByWork, setAttachmentsByWork] = useState<Record<number, WorkAttachment[]>>({});
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+
   const formModalRef = useRef<WorkFormModalHandle>(null);
   const progressModalRef = useRef<ProgressUpdateModalHandle>(null);
-  const importInputRef = useRef<HTMLInputElement>(null);
 
   const works = useMemo(() => data?.documents ?? [], [data]);
 
@@ -118,18 +128,99 @@ export default function WorksPage() {
     return () => { cancelled = true; };
   }, [works]);
 
+  // 👈 Tự động fetch ảnh đính kèm cho tất cả works để hiển thị "Hình ảnh sau làm"
+  useEffect(() => {
+    if (works.length === 0) return;
+
+    let cancelled = false;
+
+    const fetchAttachments = async () => {
+      const results: Record<number, WorkAttachment[]> = {};
+
+      await Promise.all(
+        works.map(async (w) => {
+          try {
+            const res = await db.listAttachments(w.id);
+            results[w.id] = res.documents || [];
+          } catch (e) {
+            console.error(`Lỗi tải ảnh cho work ${w.id}:`, e);
+            results[w.id] = [];
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setAttachmentsByWork(results);
+      }
+    };
+
+    fetchAttachments();
+    return () => { cancelled = true; };
+  }, [works]);
+
+  // 👈 Đóng dropdown "Hoàn thành dự kiến" khi click ra ngoài
+  useEffect(() => {
+    if (!deadlineMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deadlineMenuRef.current && !deadlineMenuRef.current.contains(e.target as Node)) {
+        setDeadlineMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [deadlineMenuOpen]);
+
+  // 👈 Danh sách tên user đã đăng ký để gợi ý PIC/Support (vẫn cho gõ tự do tên ngoài danh sách)
+  const picOptions = useMemo(() => {
+    const names = new Set<string>();
+    (usersQuery.data?.documents ?? []).forEach((u) => {
+      const name = (u.name ?? u.email ?? '').trim();
+      if (name) names.add(name);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [usersQuery.data]);
+
+  // 👈 Danh sách ngày "Hoàn thành dự kiến" (expected_deadline) duy nhất để lọc
+  const deadlineOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    works.forEach((w) => {
+      if (w.expected_deadline) {
+        map.set(w.expected_deadline, formatDueDate(w.expected_deadline));
+      }
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .map(([value, label]) => ({ value, label }));
+  }, [works]);
+
+  const toggleDeadline = (value: string) => {
+    setSelectedDeadlines((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
+    const picTerm = picFilter.trim().toLowerCase();
     return works.filter((w) => {
+      if (workflowFilter && w.workflow_status !== workflowFilter) return false;
       if (priorityFilter && w.priority !== priorityFilter) return false;
       if (statusFilter && progressBucket(w.progress_percent) !== statusFilter) return false;
+      if (picTerm) {
+        const pic = (w.lead_project || w.assigned_to_name || '').trim().toLowerCase();
+        const support = (w.assistant || w.support_name || '').trim().toLowerCase();
+        if (!pic.includes(picTerm) && !support.includes(picTerm)) return false;
+      }
+      if (selectedDeadlines.length > 0) {
+        if (!w.expected_deadline || !selectedDeadlines.includes(w.expected_deadline)) return false;
+      }
       if (term) {
         const haystack = `${w.task_name} ${w.factory_name ?? ''} ${w.lead_project ?? ''}`.toLowerCase();
         if (!haystack.includes(term)) return false;
       }
       return true;
     });
-  }, [works, search, priorityFilter, statusFilter]);
+  }, [works, search, priorityFilter, statusFilter, picFilter, selectedDeadlines, workflowFilter]);
 
   const legendCounts = useMemo(() => {
     const base = { good: 0, warn: 0, bad: 0 };
@@ -137,7 +228,7 @@ export default function WorksPage() {
     return base;
   }, [filtered]);
 
-  const handleFormSubmit = async (values: WorkFormValues, editingId: number | null) => {
+  const handleFormSubmit = async (values: WorkFormValues, editingId: number | null, isAssignMode: boolean) => {
     const payload: Partial<DigitalWork> = {
       task_name: values.task_name,
       factory_name: values.factory_name || null,
@@ -145,6 +236,9 @@ export default function WorksPage() {
       priority: values.priority as 'high' | 'medium' | 'low',
       lead_project: values.lead_project || null,
       assistant: values.assistant || null,
+      representative_name: values.representative_name || null,
+      representative_email: values.representative_email || null,
+      representative_phone: values.representative_phone || null,
       assigned_to: null,
       support_id: null,
       project_id: values.project_id ? Number(values.project_id) : null,
@@ -153,6 +247,11 @@ export default function WorksPage() {
       estimated_saving_per_year: values.estimated_saving_per_year ? Number(values.estimated_saving_per_year) : null,
       payback_years: values.payback_years ? Number(values.payback_years) : null,
     };
+
+    // 👈 "Giao công việc" → Duyệt: chuyển trạng thái quy trình sang "Đã duyệt"
+    if (isAssignMode) {
+      payload.workflow_status = 'approved';
+    }
 
     if (editingId) {
       await updateWork.mutateAsync({ id: editingId, payload });
@@ -187,37 +286,20 @@ export default function WorksPage() {
     exportWorksToExcel(filtered);
   };
 
-  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    const rows = await parseWorksExcelFile(file);
-    for (const row of rows) {
-      await createWork.mutateAsync(row as Partial<DigitalWork> & { task_name: string });
-    }
-  };
-
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div className="page-header" style={{ flexShrink: 0 }}>
         <div>
-          <h1 className="h4">Theo dõi dự án</h1>
-          <p className="text-muted mb-0">Danh sách dự án Digital theo nhà máy </p>
+          <h1 className="h4">{t('works.title')}</h1>
+          <p className="text-muted mb-0">{t('works.subtitle')}</p>
         </div>
         <div className="d-flex gap-2">
           <button type="button" className="btn btn-outline-primary" onClick={handleExport}>
-            <FiDownload className="me-1" /> Xuất Excel
+            <FiDownload className="me-1" /> {t('works.exportExcel')}
           </button>
-          {isManagerOrAdmin && (
-            <>
-              <button type="button" className="btn btn-outline-primary" onClick={() => importInputRef.current?.click()}>
-                <FiUpload className="me-1" /> Nhập Excel
-              </button>
-              <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="d-none" onChange={handleImportFile} />
-            </>
-          )}
+          <LanguageSwitcher />
           <button type="button" className="btn btn-primary" onClick={() => formModalRef.current?.openCreate()}>
-            <FiPlus className="me-1" /> {isManagerOrAdmin ? 'Thêm dự án' : 'Gửi yêu cầu'}
+            <FiPlus className="me-1" /> {isManagerOrAdmin ? t('works.addWork') : t('works.sendRequest')}
           </button>
         </div>
       </div>
@@ -231,43 +313,126 @@ export default function WorksPage() {
             <input
               className="form-control"
               style={{ maxWidth: 280 }}
-              placeholder="Tìm theo tên dự án, nhà máy, PIC..."
+              placeholder={t('works.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <select className="form-select" style={{ maxWidth: 180 }} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-              <option value="">Tất cả mức ưu tiên</option>
+              <option value="">{t('works.filters.allPriority')}</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
             <select className="form-select" style={{ maxWidth: 180 }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="">Tất cả trạng thái</option>
-              <option value="good">≥ 80%</option>
-              <option value="warn">40 – 80%</option>
-              <option value="bad">&lt; 40%</option>
+              <option value="">{t('works.filters.allStatus')}</option>
+              <option value="good">{t('works.filters.statusGood')}</option>
+              <option value="warn">{t('works.filters.statusWarn')}</option>
+              <option value="bad">{t('works.filters.statusBad')}</option>
             </select>
+            <select className="form-select" style={{ maxWidth: 180 }} value={workflowFilter} onChange={(e) => setWorkflowFilter(e.target.value)}>
+              <option value="">{t('works.filters.allWorkflow')}</option>
+              <option value="requested">{t('common.workflow.requested')}</option>
+              <option value="approved">{t('common.workflow.approved')}</option>
+              <option value="in_progress">{t('common.workflow.in_progress')}</option>
+              <option value="completed">{t('common.workflow.completed')}</option>
+            </select>
+            <input
+              type="text"
+              className="form-control"
+              list="pic-support-options"
+              style={{ maxWidth: 200 }}
+              placeholder={t('works.filters.picSupportPlaceholder')}
+              value={picFilter}
+              onChange={(e) => setPicFilter(e.target.value)}
+            />
+            <datalist id="pic-support-options">
+              {picOptions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+
+            <div ref={deadlineMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="form-select text-center"
+                style={{ maxWidth: 220, minWidth: 220 }}
+                onClick={() => setDeadlineMenuOpen((prev) => !prev)}
+              >
+                {selectedDeadlines.length > 0
+                  ? t('works.filters.expectedDeadlineCount', { count: selectedDeadlines.length })
+                  : t('works.filters.expectedDeadline')}
+              </button>
+
+              {deadlineMenuOpen && (
+                <div
+                  className="shadow"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    zIndex: 20,
+                    marginTop: '4px',
+                    minWidth: '220px',
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    background: 'var(--card-bg, #1a1d2e)',
+                    border: '1px solid rgba(148, 163, 184, 0.25)',
+                    borderRadius: '6px',
+                    padding: '8px',
+                  }}
+                >
+                  <div className="form-check">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      id="deadline-all"
+                      checked={selectedDeadlines.length === 0}
+                      onChange={() => setSelectedDeadlines([])}
+                    />
+                    <label className="form-check-label" htmlFor="deadline-all">{t('works.filters.all')}</label>
+                  </div>
+                  <hr className="my-2" />
+                  {deadlineOptions.length === 0 && (
+                    <div className="text-muted small">{t('works.filters.noDeadlineData')}</div>
+                  )}
+                  {deadlineOptions.map((opt) => (
+                    <div className="form-check" key={opt.value}>
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id={`deadline-${opt.value}`}
+                        checked={selectedDeadlines.includes(opt.value)}
+                        onChange={() => toggleDeadline(opt.value)}
+                      />
+                      <label className="form-check-label" htmlFor={`deadline-${opt.value}`}>{opt.label}</label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="legend">
-              <span><span className="legend-dot" style={{ background: 'var(--status-good)' }} />≥80% ({legendCounts.good})</span>
-              <span><span className="legend-dot" style={{ background: 'var(--status-warn)' }} />40–80% ({legendCounts.warn})</span>
-              <span><span className="legend-dot" style={{ background: 'var(--status-bad)' }} />&lt;40% ({legendCounts.bad})</span>
-              <span>{filtered.length} / {works.length} dòng</span>
+              <span><span className="legend-dot" style={{ background: 'var(--status-good)' }} />{t('works.legend.good')} ({legendCounts.good})</span>
+              <span><span className="legend-dot" style={{ background: 'var(--status-warn)' }} />{t('works.legend.warn')} ({legendCounts.warn})</span>
+              <span><span className="legend-dot" style={{ background: 'var(--status-bad)' }} />{t('works.legend.bad')} ({legendCounts.bad})</span>
+              <span>{t('works.legend.rows', { filtered: filtered.length, total: works.length })}</span>
             </div>
           </div>
 
-          {filtered.length === 0 && <EmptyState message="Không có dự án phù hợp." />}
+          {filtered.length === 0 && <EmptyState message={t('works.noMatch')} />}
 
           {filtered.length > 0 && (
             <div className="table-responsive-wrap" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0 }}>
               <table className="table align-middle mb-0">
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--card-bg, #1a1d2e)', color: 'var(--text-color, #ffffff)', zIndex: 10 }}>
                   <tr>
-                    <th style={{ width: '45px', minWidth: '45px' }}>NO.</th>
-                    <th style={{ width: '150px', minWidth: '150px' }}>DỰ ÁN</th>
-                    <th style={{ width: '120px', minWidth: '120px' }}>NHÀ MÁY</th>
-                    <th style={{ minWidth: '550px', width: 'auto' }}>TIẾN ĐỘ CẬP NHẬT</th>
-                    <th style={{ width: '130px', minWidth: '130px' }}>TRẠNG THÁI (%)</th>
-                    <th style={{ width: '150px', minWidth: '150px' }} />
+                    <th style={{ width: '45px', minWidth: '45px' }}>{t('works.columns.no')}</th>
+                    <th style={{ width: '150px', minWidth: '150px' }}>{t('works.columns.project')}</th>
+                    <th style={{ width: '160px', minWidth: '160px', textAlign: 'center' }}>{t('works.columns.image')}</th>
+                    <th style={{ width: '120px', minWidth: '120px' }}>{t('works.columns.factory')}</th>
+                    <th style={{ minWidth: '450px', width: 'auto' }}>{t('works.columns.progressUpdate')}</th>
+                    <th style={{ width: '100px', minWidth: '100px' }}>{t('works.columns.statusPercent')}</th>
+                    <th style={{ width: '60px', minWidth: '60px' }} />
                   </tr>
                 </thead>
                 <tbody>
@@ -296,12 +461,38 @@ export default function WorksPage() {
                           >
                             {work.task_name}
                           </td>
+                          <td style={{ width: '160px', minWidth: '160px', padding: '3px' }}>
+                            {(() => {
+                              const images = (attachmentsByWork[work.id] || []).filter(
+                                (a) => a.category === 'after_work' && a.mime_type?.startsWith('image/')
+                              );
+                              const latest = images[0];
+                              if (!latest) return <div className="text-muted text-center">-</div>;
+                              return (
+                                <img
+                                  src={latest.url}
+                                  alt={t('works.afterWorkImageAlt')}
+                                  style={{
+                                    display: 'block',
+                                    width: '100%',
+                                    height: '100%',
+                                    minHeight: '110px',
+                                    objectFit: 'cover',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                                  }}
+                                  onClick={() => setZoomImage(latest.url)}
+                                />
+                              );
+                            })()}
+                          </td>
                           <td style={{ whiteSpace: 'normal' }}>{work.factory_name || '—'}</td>
                           <td style={{ whiteSpace: 'normal' }}>
                             {(() => {
                               // 👈 Đang load
                               if (isLoadingPlan && (!Array.isArray(plans) || plans.length === 0)) {
-                                return <span className="text-muted small">Đang tải hạng mục…</span>;
+                                return <span className="text-muted small">{t('works.loadingMilestones')}</span>;
                               }
 
                               // 👈 Có plans array → render với due_date
@@ -315,8 +506,8 @@ export default function WorksPage() {
                                 return sortedPlans.map((p: any, idx: number) => {
                                   const dueRaw = p.due_date || p.dueDate || null;
                                   const dueText = formatDueDate(dueRaw);
-                                  const statusVN = mapStatusVN(p.status);
-                                  const overdue = isOverdue(dueRaw, statusVN);
+                                  const statusKey = mapStatusKey(p.status);
+                                  const overdue = isOverdue(dueRaw, statusKey === 'done');
 
                                   return (
                                     <div
@@ -333,12 +524,12 @@ export default function WorksPage() {
                                       <span style={{ flex: '1 1 auto', minWidth: 0 }}>
                                         • <strong>{p.step_name || p.name}</strong>:{' '}
                                         {p.progress_percent ?? p.progress ?? 0}%
-                                        <span className="text-muted ms-1">({statusVN})</span>
+                                        <span className="text-muted ms-1">({t(`common.status.${statusKey}`)})</span>
                                       </span>
 
                                       {dueText && (
                                         <span
-                                          title={overdue ? 'Đã quá hạn' : 'Hạn hoàn thành'}
+                                          title={overdue ? t('works.overdue') : t('works.dueDate')}
                                           style={{
                                             fontSize: '0.75rem',
                                             padding: '1px 6px',
@@ -382,57 +573,59 @@ export default function WorksPage() {
                             </span>
                             <span className={`status-badge ${bucket}`}>{work.progress_percent}</span>
                           </td>
-                          <td className="text-end text-nowrap">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-link"
-                              title="Xem chi tiết"
-                              onClick={() => setSelectedWork(work)}
-                            >
-                              <FiEye />
-                            </button>
-
-                            {isManagerOrAdmin && (
+                          <td className="text-center" style={{ width: '60px', minWidth: '60px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                               <button
                                 type="button"
                                 className="btn btn-sm btn-link"
-                                title="Giao công việc"
-                                onClick={() => formModalRef.current?.openAssign(work)}
+                                title={t('works.actions.viewDetail')}
+                                onClick={() => setSelectedWork(work)}
                               >
-                                <FiUserPlus />
+                                <FiEye />
                               </button>
-                            )}
 
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-link"
-                              title="Cập nhật tiến độ"
-                              disabled={!isManagerOrAdmin && !isOwner}
-                              style={(!isManagerOrAdmin && !isOwner) ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-                              onClick={() => {
-                                if (isManagerOrAdmin || isOwner) {
-                                  progressModalRef.current?.open(work);
-                                }
-                              }}
-                            >
-                              <FiEdit2 />
-                            </button>
+                              {isManagerOrAdmin && (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link"
+                                  title={t('works.actions.assign')}
+                                  onClick={() => formModalRef.current?.openAssign(work)}
+                                >
+                                  <FiUserPlus />
+                                </button>
+                              )}
 
-                            {isManagerOrAdmin && (
                               <button
                                 type="button"
-                                className="btn btn-sm btn-link text-danger"
-                                title="Xoá"
-                                onClick={() => deleteWork.mutate(work.id)}
+                                className="btn btn-sm btn-link"
+                                title={t('works.actions.updateProgress')}
+                                disabled={!isManagerOrAdmin && !isOwner}
+                                style={(!isManagerOrAdmin && !isOwner) ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                                onClick={() => {
+                                  if (isManagerOrAdmin || isOwner) {
+                                    progressModalRef.current?.open(work);
+                                  }
+                                }}
                               >
-                                <FiTrash2 />
+                                <FiEdit2 />
                               </button>
-                            )}
+
+                              {isManagerOrAdmin && (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link text-danger"
+                                  title={t('works.actions.delete')}
+                                  onClick={() => deleteWork.mutate(work.id)}
+                                >
+                                  <FiTrash2 />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                         {expandedId === work.id && (
                           <tr>
-                            <td colSpan={6} className="bg-light-subtle">
+                            <td colSpan={7} className="bg-light-subtle">
                               <TaskPlansPanel workId={work.id} canEdit={canUpdateProgress} />
                             </td>
                           </tr>
@@ -456,6 +649,37 @@ export default function WorksPage() {
       <ProgressUpdateModal ref={progressModalRef} isReviewer={isManagerOrAdmin} onSubmit={handleProgressSubmit} />
 
       <WorkDetailModal work={selectedWork} onClose={() => setSelectedWork(null)} />
+
+      {zoomImage && (
+        <div
+          onClick={() => setZoomImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={zoomImage}
+            alt={t('works.afterWorkImageAlt')}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: '8px', boxShadow: '0 0 30px rgba(0,0,0,0.5)' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => setZoomImage(null)}
+            style={{ position: 'absolute', top: '20px', right: '20px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

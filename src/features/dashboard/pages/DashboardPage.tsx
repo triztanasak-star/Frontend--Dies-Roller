@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import * as db from '../../../lib/db';
 import LoadingOverlay from '../../../components/LoadingOverlay';
@@ -12,14 +13,19 @@ function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
   return 'bad';
 }
 
-function formatBillionVnd(amount: number) {
-  return `${(amount / 1_000_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} tỷ VND`;
-}
-
-const PRIORITY_LABEL: Record<string, string> = { high: 'High (H)', medium: 'Medium (M)', low: 'Low (L)' };
-
 export default function DashboardPage() {
+  const { t, i18n } = useTranslation();
   const worksQuery = useQuery({ queryKey: ['works', 'dashboard'], queryFn: () => db.listWorks({ limit: 200 }) });
+
+  const locale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
+  const formatBillion = (amount: number) =>
+    `${(amount / 1_000_000_000).toLocaleString(locale, { maximumFractionDigits: 2 })} ${t('finance.units.billion')} ${t('finance.units.currency')}`;
+
+  const PRIORITY_LABEL: Record<string, string> = {
+    high: t('common.priority.high'),
+    medium: t('common.priority.medium'),
+    low: t('common.priority.low'),
+  };
 
   const works = useMemo(() => worksQuery.data?.documents ?? [], [worksQuery.data]);
 
@@ -40,14 +46,14 @@ export default function DashboardPage() {
     const inProgressPercent = total > 0 ? ((inProgress / total) * 100).toFixed(1) : '0';
     const notStartedPercent = total > 0 ? ((notStarted / total) * 100).toFixed(1) : '0';
 
-    return { 
-      total, 
-      avgProgress, 
-      totalCapex, 
-      totalSaving, 
-      avgPayback, 
-      completed, 
-      inProgress, 
+    return {
+      total,
+      avgProgress,
+      totalCapex,
+      totalSaving,
+      avgPayback,
+      completed,
+      inProgress,
       notStarted,
       completedPercent,
       inProgressPercent,
@@ -57,16 +63,16 @@ export default function DashboardPage() {
 
   const topProjects = useMemo(() => {
     const groups: Record<string, { total: number; count: number }> = {};
-    
+
     works.forEach((work) => {
-      const key = work.task_name?.trim() || 'Không tên';
+      const key = work.task_name?.trim() || t('finance.noName');
       if (!groups[key]) {
         groups[key] = { total: 0, count: 0 };
       }
       groups[key].total += work.progress_percent ?? 0;
       groups[key].count += 1;
     });
-    
+
     return Object.entries(groups)
       .map(([taskName, { total, count }]) => ({
         task_name: taskName,
@@ -75,7 +81,7 @@ export default function DashboardPage() {
       }))
       .sort((a, b) => b.avgProgress - a.avgProgress)
       .slice(0, 8);
-  }, [works]);
+  }, [works, t]);
 
   const highPriorityIncomplete = useMemo(
     () => works.filter((w) => w.priority === 'high' && w.progress_percent < 100),
@@ -83,9 +89,9 @@ export default function DashboardPage() {
   );
 
   const statusDistribution = [
-    { name: 'Hoàn thành', value: stats.completed, color: '#2563eb' },
-    { name: 'Đang thực hiện', value: stats.inProgress, color: '#0ea5e9' },
-    { name: 'Chưa bắt đầu', value: stats.notStarted, color: '#cbd5e1' },
+    { name: t('common.status.done'), value: stats.completed, color: '#2563eb' },
+    { name: t('common.status.in_progress'), value: stats.inProgress, color: '#0ea5e9' },
+    { name: t('common.status.pending'), value: stats.notStarted, color: '#cbd5e1' },
   ];
 
   if (worksQuery.isLoading) return <LoadingOverlay />;
@@ -103,9 +109,9 @@ export default function DashboardPage() {
     >
       <div className="page-header">
         <div>
-          <h1 className="h4">Tổng quan hoạt động Digital Team</h1>
+          <h1 className="h4">{t('dashboard.title')}</h1>
           <p className="text-muted mb-0">
-            <strong>{stats.total}</strong> dự án đang theo dõi
+            {t('dashboard.subtitle', { count: stats.total })}
           </p>
         </div>
       </div>
@@ -113,36 +119,36 @@ export default function DashboardPage() {
       <div className="row g-3">
         <div className="col-md">
           <div className="card-surface h-100">
-            <div className="text-muted small">Tổng số dự án</div>
+            <div className="text-muted small">{t('dashboard.totalWorks')}</div>
             <div className="fs-3 fw-bold">{stats.total}</div>
             <div className="text-muted small">
-              {stats.completed} hoàn thành · {stats.inProgress} đang chạy · {stats.notStarted} chưa bắt đầu
+              {t('dashboard.statusSummary', { done: stats.completed, inProgress: stats.inProgress, notStarted: stats.notStarted })}
             </div>
           </div>
         </div>
         <div className="col-md">
           <div className="card-surface h-100">
-            <div className="text-muted small">Tiến độ trung bình</div>
+            <div className="text-muted small">{t('dashboard.avgProgress')}</div>
             <div className="fs-3 fw-bold">{stats.avgProgress}%</div>
-            <div className="text-muted small">Trên toàn bộ công việc</div>
+            <div className="text-muted small">{t('dashboard.acrossAllWorks')}</div>
           </div>
         </div>
         <div className="col-md">
           <div className="card-surface h-100">
-            <div className="text-muted small">Tổng vốn đầu tư (CAPEX)</div>
-            <div className="fs-3 fw-bold">{formatBillionVnd(stats.totalCapex)}</div>
+            <div className="text-muted small">{t('dashboard.totalCapex')}</div>
+            <div className="fs-3 fw-bold">{formatBillion(stats.totalCapex)}</div>
           </div>
         </div>
         <div className="col-md">
           <div className="card-surface h-100">
-            <div className="text-muted small">Tiết kiệm ước tính / năm</div>
-            <div className="fs-3 fw-bold text-success">{formatBillionVnd(stats.totalSaving)}</div>
+            <div className="text-muted small">{t('dashboard.estimatedSaving')}</div>
+            <div className="fs-3 fw-bold text-success">{formatBillion(stats.totalSaving)}</div>
           </div>
         </div>
         <div className="col-md">
           <div className="card-surface h-100">
-            <div className="text-muted small">Thời gian hoàn vốn</div>
-            <div className="fs-3 fw-bold">{stats.avgPayback !== null ? `${stats.avgPayback.toFixed(1)} năm` : '—'}</div>
+            <div className="text-muted small">{t('dashboard.paybackTime')}</div>
+            <div className="fs-3 fw-bold">{stats.avgPayback !== null ? `${stats.avgPayback.toFixed(1)} ${t('finance.units.years')}` : '—'}</div>
           </div>
         </div>
       </div>
@@ -150,8 +156,8 @@ export default function DashboardPage() {
       <div className="row g-3">
         <div className="col-lg-7">
           <div className="card-surface h-100">
-            <h6 className="mb-3">Tiến độ theo dự án chính</h6>
-            {topProjects.length === 0 && <EmptyState message="Chưa có dự án nào." />}
+            <h6 className="mb-3">{t('dashboard.progressByMainWorks')}</h6>
+            {topProjects.length === 0 && <EmptyState message={t('dashboard.noWorks')} />}
             <div className="d-flex flex-column gap-2">
               {topProjects.map((group) => {
                 const bucket = progressBucket(group.avgProgress);
@@ -176,14 +182,14 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="col-lg-5">
           <div className="card-surface h-100 d-flex flex-column">
             <div>
-              <h6 className="mb-1">Phân bố theo trạng thái</h6>
-              <div className="text-muted small mb-2">Số dòng công việc theo mức hoàn thành</div>
+              <h6 className="mb-1">{t('dashboard.statusDistribution')}</h6>
+              <div className="text-muted small mb-2">{t('dashboard.rowsByCompletion')}</div>
             </div>
-            
+
             <div style={{ flex: 1, minHeight: '220px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -201,7 +207,7 @@ export default function DashboardPage() {
               <div className="col">
                 <div className="d-flex align-items-center justify-content-center gap-1 mb-1">
                   <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#2563eb', display: 'inline-block' }}></span>
-                  <span className="text-muted small" style={{ fontSize: '0.75rem' }}>Hoàn thành</span>
+                  <span className="text-muted small" style={{ fontSize: '0.75rem' }}>{t('common.status.done')}</span>
                 </div>
                 <div className="fw-bold fs-5 text-primary">{stats.completed}</div>
                 <div className="text-muted" style={{ fontSize: '0.75rem' }}>{stats.completedPercent}%</div>
@@ -209,7 +215,7 @@ export default function DashboardPage() {
               <div className="col border-start">
                 <div className="d-flex align-items-center justify-content-center gap-1 mb-1">
                   <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#0ea5e9', display: 'inline-block' }}></span>
-                  <span className="text-muted small" style={{ fontSize: '0.75rem' }}>Đang thực hiện</span>
+                  <span className="text-muted small" style={{ fontSize: '0.75rem' }}>{t('common.status.in_progress')}</span>
                 </div>
                 <div className="fw-bold fs-5 text-info">{stats.inProgress}</div>
                 <div className="text-muted" style={{ fontSize: '0.75rem' }}>{stats.inProgressPercent}%</div>
@@ -217,7 +223,7 @@ export default function DashboardPage() {
               <div className="col border-start">
                 <div className="d-flex align-items-center justify-content-center gap-1 mb-1">
                   <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#cbd5e1', display: 'inline-block' }}></span>
-                  <span className="text-muted small" style={{ fontSize: '0.75rem' }}>Chưa bắt đầu</span>
+                  <span className="text-muted small" style={{ fontSize: '0.75rem' }}>{t('common.status.pending')}</span>
                 </div>
                 <div className="fw-bold fs-5 text-secondary">{stats.notStarted}</div>
                 <div className="text-muted" style={{ fontSize: '0.75rem' }}>{stats.notStartedPercent}%</div>
@@ -228,18 +234,18 @@ export default function DashboardPage() {
       </div>
 
       <div className="card-surface">
-        <h6 className="mb-3">Ưu tiên cao — chưa hoàn thành</h6>
-        {highPriorityIncomplete.length === 0 && <EmptyState message="Không có dự án ưu tiên cao nào đang chờ." />}
+        <h6 className="mb-3">{t('dashboard.highPriorityPending')}</h6>
+        {highPriorityIncomplete.length === 0 && <EmptyState message={t('dashboard.noHighPriorityPending')} />}
         {highPriorityIncomplete.length > 0 && (
           <div className="table-responsive-wrap">
             <table className="table align-middle mb-0">
               <thead>
                 <tr>
-                  <th>DỰ ÁN</th>
-                  <th>NHÀ MÁY</th>
-                  <th>PIC</th>
-                  <th>TIẾN ĐỘ</th>
-                  <th>%</th>
+                  <th>{t('dashboard.columns.project')}</th>
+                  <th>{t('dashboard.columns.factory')}</th>
+                  <th>{t('dashboard.columns.pic')}</th>
+                  <th>{t('dashboard.columns.progress')}</th>
+                  <th>{t('dashboard.columns.percent')}</th>
                 </tr>
               </thead>
               <tbody>

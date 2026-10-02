@@ -1,0 +1,327 @@
+{
+  "common": {
+    "noData": "No data yet.",
+    "error": "Something went wrong, please try again.",
+    "loading": "Loading...",
+    "authenticating": "Authenticating...",
+    "backHome": "Back to home",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create new",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "status": {
+      "pending": "Not started",
+      "in_progress": "In progress",
+      "done": "Completed"
+    },
+    "priority": {
+      "high": "High (H)",
+      "medium": "Medium (M)",
+      "low": "Low (L)"
+    },
+    "workflow": {
+      "requested": "Requested",
+      "approved": "Approved",
+      "in_progress": "In progress",
+      "completed": "Completed"
+    },
+    "factories": {
+      "tienGiang": "Tien Giang Factory",
+      "dongNai": "Dong Nai Factory",
+      "bauXeo": "Bau Xeo Factory",
+      "binhPhuoc": "Binh Phuoc Factory",
+      "binhDuong": "Binh Duong Factory",
+      "binhDinh": "Binh Dinh Factory",
+      "haiDuong": "Hai Duong Factory",
+      "xuanMai": "Xuan Mai Factory"
+    },
+    "language": "Language"
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page not found",
+    "message": "The page you are looking for is invalid or has been removed."
+  },
+  "forbidden": {
+    "code": "403",
+    "title": "Access denied",
+    "message": "You don't have permission to view this page."
+  },
+  "sidebar": {
+    "dashboard": "Overview",
+    "works": "Project tracking",
+    "finance": "Financial analysis",
+    "admin": "Administration",
+    "users": "Users",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "logout": "Log out",
+    "toggleMenu": "Toggle menu",
+    "roles": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "user": "User"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to Digital Work",
+      "registerSuccess": "Registration successful, please sign in.",
+      "invalidCredentials": "Incorrect email or password.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "registerNow": "Sign up now"
+    },
+    "register": {
+      "title": "Create a Digital Work account",
+      "passwordTooShort": "Password must be at least 8 characters.",
+      "passwordMismatch": "Confirmation password does not match.",
+      "emailInUse": "This email is already in use.",
+      "failed": "Registration failed, please try again.",
+      "name": "Full name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "passwordHint": "At least 8 characters.",
+      "submit": "Sign up",
+      "submitting": "Signing up...",
+      "haveAccount": "Already have an account?",
+      "loginNow": "Sign in"
+    }
+  },
+  "dashboard": {
+    "title": "Digital Team activity overview",
+    "subtitle": "{{count}} projects being tracked",
+    "totalWorks": "Total projects",
+    "statusSummary": "{{done}} completed · {{inProgress}} in progress · {{notStarted}} not started",
+    "avgProgress": "Average progress",
+    "acrossAllWorks": "Across all projects",
+    "totalCapex": "Total CAPEX",
+    "estimatedSaving": "Estimated saving / year",
+    "paybackTime": "Payback time",
+    "progressByMainWorks": "Progress by main projects",
+    "noWorks": "No projects yet.",
+    "statusDistribution": "Status distribution",
+    "rowsByCompletion": "Number of items by completion level",
+    "highPriorityPending": "High priority — not completed",
+    "noHighPriorityPending": "No pending high-priority projects.",
+    "columns": {
+      "project": "PROJECT",
+      "factory": "FACTORY",
+      "pic": "PIC",
+      "progress": "PROGRESS",
+      "percent": "%"
+    }
+  },
+  "finance": {
+    "loading": "Loading financial data...",
+    "totalCapex": "TOTAL CAPEX",
+    "totalSavingPerYear": "TOTAL SAVING / YEAR",
+    "paybackTime": "PAYBACK TIME",
+    "capexDivSaving": "Capex ÷ Saving/year",
+    "accumulatedSaving5y": "ACCUMULATED SAVING (5 YEARS)",
+    "beforeCapex": "Before deducting Capex",
+    "listTitle": "Capex & Saving list",
+    "itemCount": "{{count}} items",
+    "columns": {
+      "item": "ITEM / PROJECT",
+      "capex": "CAPEX (VND)",
+      "saving": "SAVING (VND) / YEAR",
+      "payback": "PAYBACK",
+      "otherBenefit": "OTHER BENEFITS"
+    },
+    "noName": "No name",
+    "noData": "No project data yet.",
+    "units": {
+      "billion": "billion",
+      "currency": "VND",
+      "currencyPerYear": "VND/year",
+      "years": "years"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "name": "Project name",
+    "description": "Description",
+    "create": "Create new",
+    "noProjects": "No projects yet.",
+    "columns": {
+      "name": "Project name",
+      "status": "Status",
+      "createdAt": "Created date"
+    },
+    "viewWorks": "View works"
+  },
+  "users": {
+    "title": "Users",
+    "name": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "role": "Role",
+    "roleOptions": {
+      "user": "User",
+      "manager": "Manager",
+      "admin": "Admin"
+    },
+    "create": "Create new",
+    "noUsers": "No users yet.",
+    "columns": {
+      "name": "Full name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "save": "Save",
+    "lock": "Lock",
+    "unlock": "Unlock"
+  },
+  "works": {
+    "title": "Project tracking",
+    "subtitle": "List of Digital projects by factory",
+    "exportExcel": "Export Excel",
+    "addWork": "Add project",
+    "sendRequest": "Send request",
+    "searchPlaceholder": "Search by project name, factory",
+    "filters": {
+      "allPriority": "All priorities",
+      "allStatus": "All statuses",
+      "allWorkflow": "All stages",
+      "picSupportPlaceholder": "All PIC / Support",
+      "expectedDeadline": "Expected completion",
+      "expectedDeadlineCount": "Expected completion ({{count}})",
+      "all": "All",
+      "noDeadlineData": "No date data.",
+      "statusGood": "≥ 80%",
+      "statusWarn": "40 – 80%",
+      "statusBad": "< 40%"
+    },
+    "legend": {
+      "good": "≥80%",
+      "warn": "40–80%",
+      "bad": "<40%",
+      "rows": "{{filtered}} / {{total}} rows"
+    },
+    "noMatch": "No matching projects.",
+    "columns": {
+      "no": "NO.",
+      "project": "PROJECT",
+      "image": "IMAGE",
+      "factory": "FACTORY",
+      "progressUpdate": "PROGRESS UPDATE",
+      "statusPercent": "STATUS (%)"
+    },
+    "loadingMilestones": "Loading milestones…",
+    "overdue": "Overdue",
+    "dueDate": "Due date",
+    "actions": {
+      "viewDetail": "View details",
+      "assign": "Assign work",
+      "updateProgress": "Update progress",
+      "delete": "Delete"
+    },
+    "afterWorkImageAlt": "After-work image"
+  },
+  "workForm": {
+    "titleAssign": "Assign work",
+    "titleEdit": "Edit project",
+    "titleCreate": "Add project",
+    "taskName": "Task name *",
+    "factory": "Factory",
+    "factoryPlaceholder": "Type or select",
+    "priority": "Priority",
+    "description": "Detailed description",
+    "representativeName": "Representative",
+    "email": "Email",
+    "phone": "Phone",
+    "expectedDeadline": "Desired deadline",
+    "attachment": "PDF / image attachment",
+    "pic": "PIC",
+    "picPlaceholder": "Select or type PIC name...",
+    "support": "Support",
+    "supportPlaceholder": "Select or type Support name...",
+    "cancel": "Cancel",
+    "submitApprove": "Approve",
+    "submitApproving": "Approving...",
+    "submitSave": "Save",
+    "submitSaving": "Saving...",
+    "submitRequest": "Request",
+    "submitRequesting": "Sending..."
+  },
+  "workDetail": {
+    "title": "Project details: {{name}}",
+    "generalInfo": "General information",
+    "additionalInfo": "Additional information",
+    "detailedProgress": "Detailed progress update",
+    "project": "Project",
+    "factory": "Factory",
+    "priority": "Priority",
+    "statusPercent": "Status (%)",
+    "pic": "PIC (Person in charge)",
+    "support": "Support",
+    "expectedDeadline": "Expected completion",
+    "attachments": "Attachments",
+    "afterWorkImages": "After-work images",
+    "noImages": "— No images",
+    "noAttachments": "— No attachments",
+    "noProgressUpdate": "— No progress update yet",
+    "close": "Close"
+  },
+  "progress": {
+    "title": "Update progress — {{name}}",
+    "planSection": "Execution plan (milestones)",
+    "avgProgress": "Average progress: {{percent}}%",
+    "addMilestonePlaceholder": "Add a new milestone...",
+    "dueDateOptional": "Due date (optional)",
+    "add": "Add",
+    "noMilestones": "No milestones yet.",
+    "milestoneNamePlaceholder": "Milestone name",
+    "dueDate": "Due date",
+    "delete": "Delete",
+    "financeSection": "Management & financial information",
+    "capex": "CAPEX (VND)",
+    "estimatedSaving": "Estimated saving/year (VND)",
+    "paybackYears": "Payback time (years)",
+    "otherBenefit": "Other benefits",
+    "supportRequest": "Support needed",
+    "afterWorkImages": "After-work images",
+    "cancel": "Cancel",
+    "accept": "Accept",
+    "save": "Save",
+    "saving": "Saving...",
+    "close": "Close"
+  },
+  "taskPlans": {
+    "planSection": "Execution plan (milestones)",
+    "avgProgress": "Average progress: {{percent}}%",
+    "addPlaceholder": "Add a new milestone...",
+    "dueDateTitle": "Expected completion date",
+    "add": "Add",
+    "loading": "Loading plan...",
+    "noMilestones": "No milestones yet.",
+    "delete": "Delete"
+  },
+  "excel": {
+    "sheetName": "Project",
+    "columns": {
+      "no": "NO.",
+      "project": "Project",
+      "priority": "Priority",
+      "factory": "Factory",
+      "progressUpdate": "Progress update",
+      "pic": "PIC",
+      "support": "Support",
+      "statusPercent": "Status (%)",
+      "status": "Status",
+      "expectedDeadline": "Expected completion"
+    }
+  }
+}

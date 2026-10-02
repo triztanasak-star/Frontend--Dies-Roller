@@ -39,6 +39,7 @@ export interface DigitalWork {
   description: string | null;
   factory_name: string | null;
   status: number;
+  workflow_status: 'requested' | 'approved' | 'in_progress' | 'completed';
   priority: 'high' | 'medium' | 'low';
   progress_percent: number;
   expected_deadline: string | null;
@@ -46,6 +47,9 @@ export interface DigitalWork {
   completed_at: string | null;
   lead_project: string | null;
   assistant: string | null;
+  representative_name: string | null;
+  representative_email: string | null;
+  representative_phone: string | null;
   project_id: number | null;
   assigned_to: number | null;
   assigned_to_name: string | null;
@@ -57,6 +61,7 @@ export interface DigitalWork {
   payback_years: number | null;
   manager_comment: string | null;
   progress_comment: string | null;
+  support_request: string | null;
   has_feedback: boolean;
   feedback_comment: string | null;
   rating: number | null;
@@ -86,6 +91,7 @@ export interface WorkAttachment {
   url: string;
   original_name: string;
   mime_type: string | null;
+  category: string | null;
   uploaded_by: number | null;
   created_at: string;
 }
@@ -220,10 +226,11 @@ export const listAttachments = async (workId: number) => {
   return res.data as { documents: WorkAttachment[] };
 };
 
-export const uploadAttachments = async (workId: number, files: File[]) => {
+export const uploadAttachments = async (workId: number, files: File[], category?: string) => {
   const formData = new FormData();
   for (const file of files) formData.append('files', file);
-  
+  if (category) formData.append('category', category);
+
   // Đã bỏ headers cứng để Axios tự động gắn token xác thực
   const res = await client.post(`/api/works/${workId}/attachments`, formData);
   return res.data as { documents: WorkAttachment[] };

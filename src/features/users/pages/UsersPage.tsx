@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import LoadingOverlay from '../../../components/LoadingOverlay';
 import ErrorState from '../../../components/ErrorState';
 import EmptyState from '../../../components/EmptyState';
@@ -6,6 +7,7 @@ import { useCreateUser, useUpdateUser, useUsers } from '../hooks/useUsers';
 import type { Role } from '../../../lib/db';
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const { data, isLoading, isError } = useUsers();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -49,33 +51,33 @@ export default function UsersPage() {
 
   return (
     <div>
-      <h1 className="h4 mb-4">Người dùng</h1>
+      <h1 className="h4 mb-4">{t('users.title')}</h1>
 
       <form className="card-surface mb-4" onSubmit={handleCreate}>
         <div className="row g-2 align-items-end">
           <div className="col-md-3">
-            <label className="form-label">Họ tên</label>
+            <label className="form-label">{t('users.name')}</label>
             <input className="form-control" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div className="col-md-3">
-            <label className="form-label">Email</label>
+            <label className="form-label">{t('users.email')}</label>
             <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Mật khẩu</label>
+            <label className="form-label">{t('users.password')}</label>
             <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Quyền</label>
+            <label className="form-label">{t('users.role')}</label>
             <select className="form-select" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              <option value="user">User</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
+              <option value="user">{t('users.roleOptions.user')}</option>
+              <option value="manager">{t('users.roleOptions.manager')}</option>
+              <option value="admin">{t('users.roleOptions.admin')}</option>
             </select>
           </div>
           <div className="col-md-2">
             <button type="submit" className="btn btn-primary w-100" disabled={createUser.isPending}>
-              Tạo mới
+              {t('users.create')}
             </button>
           </div>
         </div>
@@ -83,18 +85,18 @@ export default function UsersPage() {
 
       {isLoading && <LoadingOverlay />}
       {isError && <ErrorState />}
-      {!isLoading && !isError && (data?.documents.length ?? 0) === 0 && <EmptyState message="Chưa có người dùng." />}
+      {!isLoading && !isError && (data?.documents.length ?? 0) === 0 && <EmptyState message={t('users.noUsers')} />}
 
       {!isLoading && !isError && (data?.documents.length ?? 0) > 0 && (
         <div className="card-surface p-0">
           <table className="table mb-0 align-middle">
             <thead>
               <tr>
-                <th>Họ tên</th>
-                <th>Email</th>
-                <th>Quyền</th>
-                <th>Trạng thái</th>
-                <th className="text-end">Thao tác</th>
+                <th>{t('users.columns.name')}</th>
+                <th>{t('users.columns.email')}</th>
+                <th>{t('users.columns.role')}</th>
+                <th>{t('users.columns.status')}</th>
+                <th className="text-end">{t('users.columns.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -115,9 +117,9 @@ export default function UsersPage() {
                           value={currentSelectedRole}
                           onChange={(e) => handleRoleChange(String(u.id), e.target.value as Role)}
                         >
-                          <option value="user">User</option>
-                          <option value="manager">Manager</option>
-                          <option value="admin">Admin</option>
+                          <option value="user">{t('users.roleOptions.user')}</option>
+                          <option value="manager">{t('users.roleOptions.manager')}</option>
+                          <option value="admin">{t('users.roleOptions.admin')}</option>
                         </select>
 
                         {/* Chỉ hiện nút Lưu khi người dùng thay đổi quyền khác với database */}
@@ -128,7 +130,7 @@ export default function UsersPage() {
                             onClick={() => handleSaveRole(String(u.id))}
                             disabled={updateUser.isPending}
                           >
-                            Lưu
+                            {t('users.save')}
                           </button>
                         )}
                       </div>
@@ -143,7 +145,7 @@ export default function UsersPage() {
                           className="btn btn-sm btn-outline-danger"
                           onClick={() => updateUser.mutate({ id: u.id, payload: { status: 'disabled' } })}
                         >
-                          Khoá
+                          {t('users.lock')}
                         </button>
                       ) : (
                         <button
@@ -151,7 +153,7 @@ export default function UsersPage() {
                           className="btn btn-sm btn-outline-success"
                           onClick={() => updateUser.mutate({ id: u.id, payload: { status: 'active' } })}
                         >
-                          Mở khóa
+                          {t('users.unlock')}
                         </button>
                       )}
                     </td>

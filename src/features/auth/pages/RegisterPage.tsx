@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../context/AuthContext';
 import * as db from '../../../lib/db';
 
 export default function RegisterPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,11 +22,11 @@ export default function RegisterPage() {
     setError(null);
 
     if (password.length < 8) {
-      setError('Mật khẩu phải có ít nhất 8 ký tự.');
+      setError(t('auth.register.passwordTooShort'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp.');
+      setError(t('auth.register.passwordMismatch'));
       return;
     }
 
@@ -35,7 +37,7 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(message === 'Email already exists' ? 'Email này đã được sử dụng.' : 'Đăng ký thất bại, vui lòng thử lại.');
+      setError(message === 'Email already exists' ? t('auth.register.emailInUse') : t('auth.register.failed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -44,11 +46,11 @@ export default function RegisterPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <h1 className="h4 mb-4 text-center">Đăng ký tài khoản Digital Work</h1>
+        <h1 className="h4 mb-4 text-center">{t('auth.register.title')}</h1>
         {error && <div className="alert alert-danger" role="alert">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label" htmlFor="name">Họ tên</label>
+            <label className="form-label" htmlFor="name">{t('auth.register.name')}</label>
             <input
               id="name"
               type="text"
@@ -59,7 +61,7 @@ export default function RegisterPage() {
             />
           </div>
           <div className="mb-3">
-            <label className="form-label" htmlFor="email">Email</label>
+            <label className="form-label" htmlFor="email">{t('auth.register.email')}</label>
             <input
               id="email"
               type="email"
@@ -70,7 +72,7 @@ export default function RegisterPage() {
             />
           </div>
           <div className="mb-3">
-            <label className="form-label" htmlFor="password">Mật khẩu</label>
+            <label className="form-label" htmlFor="password">{t('auth.register.password')}</label>
             <input
               id="password"
               type="password"
@@ -80,10 +82,10 @@ export default function RegisterPage() {
               minLength={8}
               required
             />
-            <div className="form-text">Ít nhất 8 ký tự.</div>
+            <div className="form-text">{t('auth.register.passwordHint')}</div>
           </div>
           <div className="mb-4">
-            <label className="form-label" htmlFor="confirmPassword">Xác nhận mật khẩu</label>
+            <label className="form-label" htmlFor="confirmPassword">{t('auth.register.confirmPassword')}</label>
             <input
               id="confirmPassword"
               type="password"
@@ -95,11 +97,11 @@ export default function RegisterPage() {
             />
           </div>
           <button type="submit" className="btn btn-primary w-100" disabled={isSubmitting}>
-            {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký'}
+            {isSubmitting ? t('auth.register.submitting') : t('auth.register.submit')}
           </button>
         </form>
         <p className="text-center mt-3 mb-0 text-muted">
-          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+          {t('auth.register.haveAccount')} <Link to="/login">{t('auth.register.loginNow')}</Link>
         </p>
       </div>
     </div>

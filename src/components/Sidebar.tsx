@@ -1,19 +1,16 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FiGrid, FiCheckSquare, FiUsers, FiPieChart, FiLogOut, FiSun, FiMoon } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import logoImg from '../assets/logoDigital.JPG.jpg';
-
-const ROLE_LABEL: Record<string, string> = {
-  admin: 'Admin',
-  manager: 'Manager',
-  user: 'User',
-};
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Sidebar() {
   const { user, can, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const closeSidebar = () => setIsOpen(false);
@@ -25,7 +22,7 @@ export default function Sidebar() {
         type="button"
         className="sidebar-toggle"
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle menu"
+        aria-label={t('sidebar.toggleMenu')}
       >
         ☰
       </button>
@@ -60,21 +57,21 @@ export default function Sidebar() {
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
           <nav className="nav flex-column">
             <NavLink to="/dashboard" className="nav-link d-flex align-items-center gap-2 px-3 py-2" onClick={closeSidebar}>
-              <FiGrid /> Tổng quan
+              <FiGrid /> {t('sidebar.dashboard')}
             </NavLink>
             <NavLink to="/works" className="nav-link d-flex align-items-center gap-2 px-3 py-2" onClick={closeSidebar}>
-              <FiCheckSquare /> Theo dõi dự án
+              <FiCheckSquare /> {t('sidebar.works')}
             </NavLink>
             <NavLink to="/finance" className="nav-link d-flex align-items-center gap-2 px-3 py-2" onClick={closeSidebar}>
-              <FiPieChart /> Phân tích tài chính
+              <FiPieChart /> {t('sidebar.finance')}
             </NavLink>
           </nav>
 
-          <div className="nav-section-label">Quản trị</div>
+          <div className="nav-section-label">{t('sidebar.admin')}</div>
           <nav className="nav flex-column">
             {can('admin') && (
               <NavLink to="/users" className="nav-link d-flex align-items-center gap-2 px-3 py-2" onClick={closeSidebar}>
-                <FiUsers /> Người dùng
+                <FiUsers /> {t('sidebar.users')}
               </NavLink>
             )}
           </nav>
@@ -87,21 +84,22 @@ export default function Sidebar() {
         >
           <div className="sidebar-user">
             {user?.name}
-            <span className="badge text-bg-primary ms-2">{ROLE_LABEL[user?.role ?? 'user']}</span>
+            <span className="badge text-bg-primary ms-2">{t(`sidebar.roles.${user?.role ?? 'user'}`)}</span>
           </div>
+          <LanguageSwitcher className="w-100 mb-2" />
           <button
             type="button"
             className="btn btn-sm btn-outline-light w-100 d-flex align-items-center justify-content-center gap-2 mb-2"
             onClick={toggleTheme}
           >
-            {theme === 'dark' ? <FiSun /> : <FiMoon />} {theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối'}
+            {theme === 'dark' ? <FiSun /> : <FiMoon />} {theme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
           </button>
           <button
             type="button"
             className="btn btn-sm btn-outline-light w-100 d-flex align-items-center justify-content-center gap-2"
             onClick={() => logout()}
           >
-            <FiLogOut /> Đăng xuất
+            <FiLogOut /> {t('sidebar.logout')}
           </button>
         </div>
       </aside>

@@ -1,13 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { FiPaperclip } from 'react-icons/fi';
 import * as db from '../../../lib/db';
 import type { DigitalWork } from '../../../lib/db';
-
-const PRIORITY_LABEL: Record<string, string> = {
-  high: 'High (H)',
-  medium: 'Medium (M)',
-  low: 'Low (L)',
-};
 
 function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
   if (percent >= 80) return 'good';
@@ -18,16 +13,23 @@ function progressBucket(percent: number): 'good' | 'warn' | 'bad' {
 // ============================================================
 // Component hiển thị danh sách tài liệu đính kèm (trong Modal)
 // ============================================================
-function WorkAttachmentsList({ workId }: { workId: number }) {
+function WorkAttachmentsList({ workId, category }: { workId: number; category?: 'after_work' }) {
+  const { t } = useTranslation();
   const { data } = useQuery({
     queryKey: ['work_attachments', workId],
     queryFn: () => db.listAttachments(workId),
   });
 
-  const attachments = data?.documents ?? [];
+  const attachments = (data?.documents ?? []).filter((f: any) =>
+    category === 'after_work' ? f.category === 'after_work' : f.category !== 'after_work'
+  );
 
   if (attachments.length === 0) {
-    return <span className="text-muted">— Không có tài liệu</span>;
+    return (
+      <span className="text-muted">
+        {category === 'after_work' ? t('workDetail.noImages') : t('workDetail.noAttachments')}
+      </span>
+    );
   }
 
   const handleDownload = async (
@@ -86,8 +88,16 @@ interface WorkDetailModalProps {
 }
 
 export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps) {
+  const { t, i18n } = useTranslation();
   if (!work) return null;
 
+  const PRIORITY_LABEL: Record<string, string> = {
+    high: t('common.priority.high'),
+    medium: t('common.priority.medium'),
+    low: t('common.priority.low'),
+  };
+
+  const locale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
   const bucket = progressBucket(work.progress_percent);
   const barColor =
     bucket === 'good'
@@ -113,7 +123,7 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
           {/* Header */}
           <div className="modal-header border-secondary">
             <h5 className="modal-title">
-              Chi tiết dự án:{' '}
+              {t('workDetail.title', { name: '' })}{' '}
               <span className="text-primary">{work.task_name}</span>
             </h5>
             <button
@@ -127,25 +137,25 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
           <div className="modal-body">
             {/* PHẦN 1: Thông tin chung */}
             <h6 className="text-muted text-uppercase small mb-3">
-              Thông tin chung
+              {t('workDetail.generalInfo')}
             </h6>
             <div className="row g-3 mb-4">
               <div className="col-md-6">
-                <label className="text-muted small d-block">Dự án</label>
+                <label className="text-muted small d-block">{t('workDetail.project')}</label>
                 <span className="fw-semibold">{work.task_name}</span>
               </div>
               <div className="col-md-6">
-                <label className="text-muted small d-block">Nhà máy</label>
+                <label className="text-muted small d-block">{t('workDetail.factory')}</label>
                 <span>{work.factory_name || '—'}</span>
               </div>
               <div className="col-md-6">
-                <label className="text-muted small d-block">Ưu tiên</label>
+                <label className="text-muted small d-block">{t('workDetail.priority')}</label>
                 <span className={`badge-priority ${work.priority}`}>
                   {PRIORITY_LABEL[work.priority]}
                 </span>
               </div>
               <div className="col-md-6">
-                <label className="text-muted small d-block">Trạng thái (%)</label>
+                <label className="text-muted small d-block">{t('workDetail.statusPercent')}</label>
                 <div className="d-flex align-items-center gap-2">
                   <span
                     className="status-progress-bar"
@@ -169,36 +179,42 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
 
             {/* PHẦN 2: 4 cột đã ẩn khỏi bảng chính */}
             <h6 className="text-muted text-uppercase small mb-3">
-              Thông tin bổ sung
+              {t('workDetail.additionalInfo')}
             </h6>
             <div className="row g-3 mb-4">
               <div className="col-md-6">
                 <label className="text-muted small d-block">
-                  PIC (Người phụ trách chính)
+                  {t('workDetail.pic')}
                 </label>
                 <span className="fw-semibold">
                   {work.lead_project || work.assigned_to_name || '—'}
                 </span>
               </div>
               <div className="col-md-6">
-                <label className="text-muted small d-block">Hỗ trợ</label>
+                <label className="text-muted small d-block">{t('workDetail.support')}</label>
                 <span>{work.assistant || work.support_name || '—'}</span>
               </div>
               <div className="col-md-6">
                 <label className="text-muted small d-block">
-                  Hoàn thành dự kiến
+                  {t('workDetail.expectedDeadline')}
                 </label>
                 <span>
                   {work.expected_deadline
-                    ? new Date(work.expected_deadline).toLocaleDateString('vi-VN')
+                    ? new Date(work.expected_deadline).toLocaleDateString(locale)
                     : '—'}
                 </span>
               </div>
               <div className="col-md-6">
                 <label className="text-muted small d-block">
-                  Tài liệu đính kèm
+                  {t('workDetail.attachments')}
                 </label>
                 <WorkAttachmentsList workId={work.id} />
+              </div>
+              <div className="col-md-6">
+                <label className="text-muted small d-block">
+                  {t('workDetail.afterWorkImages')}
+                </label>
+                <WorkAttachmentsList workId={work.id} category="after_work" />
               </div>
             </div>
 
@@ -206,7 +222,7 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
 
             {/* PHẦN 3: Tiến độ chi tiết (không cắt ngắn) */}
             <h6 className="text-muted text-uppercase small mb-3">
-              Tiến độ cập nhật chi tiết
+              {t('workDetail.detailedProgress')}
             </h6>
             <div
               className="p-3 rounded"
@@ -250,7 +266,7 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
                 }
 
                 return (
-                  <span className="text-muted">— Chưa có cập nhật tiến độ</span>
+                  <span className="text-muted">{t('workDetail.noProgressUpdate')}</span>
                 );
               })()}
             </div>
@@ -263,7 +279,7 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
               className="btn btn-secondary"
               onClick={onClose}
             >
-              Đóng
+              {t('workDetail.close')}
             </button>
           </div>
         </div>
