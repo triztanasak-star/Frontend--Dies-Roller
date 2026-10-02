@@ -13,6 +13,8 @@ import ProjectsPage from './features/projects/pages/ProjectsPage';
 import WorksPage from './features/works/pages/WorksPage';
 import UsersPage from './features/users/pages/UsersPage';
 import FinancePage from './features/finance/pages/FinancePage';
+import './lib/adapters/nodeAdapter'
+import './lib/db'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
