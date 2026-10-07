@@ -14,9 +14,12 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-function fmtNum(v: number | null | undefined): string {
-  if (v === null || v === undefined) return '—';
-  return new Intl.NumberFormat('vi-VN').format(Number(v));
+// ✅ SỬA: Nhận cả string (vì dies_hole_mm có thể là "8x12", "No Hole"...)
+function fmtNum(v: number | string | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (isNaN(n)) return String(v);   // Nếu không parse được thành số → trả về string gốc
+  return new Intl.NumberFormat('vi-VN').format(n);
 }
 
 function fmtDate(dateStr?: string | null): string {
@@ -26,14 +29,14 @@ function fmtDate(dateStr?: string | null): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-export default function RollerPublicPage() {  // ✅ Đổi tên function
+export default function RollerPublicPage() {
   const { id } = useParams<{ id: string }>();
   const workId = Number(id);
 
   const { data, isLoading, isError } = useQuery({
-    // ✅ Đổi queryKey để không trùng cache với Die
     queryKey: ['roller-public', workId],
-    queryFn: () => db.getWorkPublic(workId),
+    // ✅ SỬA: Truyền 'roller' để backend query bảng digital_roller_works
+    queryFn: () => db.getWorkPublic(workId, 'roller'),
     enabled: !isNaN(workId) && workId > 0,
   });
 
@@ -59,7 +62,6 @@ export default function RollerPublicPage() {  // ✅ Đổi tên function
           marginBottom: 20,
           textAlign: 'center',
         }}>
-          {/* ✅ Đổi text hiển thị */}
           <div style={{ fontSize: '0.9rem', opacity: 0.9, marginBottom: 4 }}>
             THÔNG TIN ROLLER
           </div>
@@ -67,7 +69,6 @@ export default function RollerPublicPage() {  // ✅ Đổi tên function
             {work.dies_model || 'Không xác định'}
           </h1>
           <div style={{ fontSize: '1rem', marginTop: 8, opacity: 0.9 }}>
-            {/* ✅ Đổi text hiển thị */}
             Mã trục: <strong>{work.dies_code || '—'}</strong>
           </div>
         </div>
@@ -93,13 +94,14 @@ export default function RollerPublicPage() {  // ✅ Đổi tên function
           gap: 12,
           marginBottom: 20,
         }}>
-          {/* ✅ Đổi label hiển thị, giữ nguyên tên field */}
           <InfoCard label="Roller Model" value={work.dies_model} />
           <InfoCard label="Roller Code" value={work.dies_code} />
           <InfoCard label="Supplier" value={work.supplier} />
-          <InfoCard label="Roller Hole (mm)" value={fmtNum(work.dies_hole_mm)} />
-          <InfoCard label="Press Length (mm)" value={work.press_length_mm} />
-          <InfoCard label="L/D Ratio" value={fmtNum(work.ld_ratio)} />
+          {/* ✅ SỬA: Roller Shell Hole (thay vì Roller Hole) */}
+          <InfoCard label="Roller Shell Hole (mm)" value={fmtNum(work.dies_hole_mm)} />
+          {/* ✅ SỬA: Roller Shell Type (thay vì Press Length) */}
+          <InfoCard label="Roller Shell Type" value={work.press_length_mm} />
+          {/* ✅ XÓA: L/D Ratio (không dùng cho Roller) */}
           <InfoCard label="Line in use" value={work.line_in_use} />
           <InfoCard label="Tiêu chuẩn (tấn)" value={fmtNum(work.standard_ton)} />
           <InfoCard label="Số tấn đã dùng" value={fmtNum(work.dies_life_ton)} />
@@ -144,7 +146,6 @@ export default function RollerPublicPage() {  // ✅ Đổi tên function
           fontSize: '0.8rem',
           color: '#64748b',
         }}>
-          {/* ✅ Đổi text footer */}
           Dies Roller Manager — Feed Digital
         </div>
       </div>

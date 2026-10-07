@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DigitalWork, Project, User } from '../../../lib/db';
+import type { DigitalWork, Project, User } from '../../../../lib/db';
 
 function MultiNameInput({
   value,
