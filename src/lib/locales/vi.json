@@ -70,7 +70,7 @@
   },
   "auth": {
     "login": {
-      "title": "Đăng nhập Digital Work",
+      "title": "Đăng nhập Dies Roller Manager",
       "registerSuccess": "Đăng ký thành công, vui lòng đăng nhập.",
       "invalidCredentials": "Email hoặc mật khẩu không đúng.",
       "email": "Email",
@@ -81,7 +81,7 @@
       "registerNow": "Đăng ký ngay"
     },
     "register": {
-      "title": "Đăng ký tài khoản Digital Work",
+      "title": "Đăng ký tài khoản Dies Roller Manager",
       "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự.",
       "passwordMismatch": "Mật khẩu xác nhận không khớp.",
       "emailInUse": "Email này đã được sử dụng.",
