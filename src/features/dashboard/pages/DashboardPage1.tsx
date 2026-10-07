@@ -10,7 +10,7 @@ import type { DigitalWork } from '../../../lib/db';
 import LoadingOverlay from '../../../components/LoadingOverlay';
 import ErrorState from '../../../components/ErrorState';
 import EmptyState from '../../../components/EmptyState';
-import { useTheme } from '../../../context/ThemeContext';   // ✅ Đổi path nếu cần
+import { useTheme } from '../../../context/ThemeContext';
 
 // ============================================================
 // Helpers
@@ -20,6 +20,7 @@ function fmtNum(v: number | null | undefined): string {
   return new Intl.NumberFormat('vi-VN').format(Number(v));
 }
 
+// Trạng thái Roller
 const STATUS_LABELS: Record<number, string> = {
   0: 'Trong kho',
   1: 'Đang sử dụng',
@@ -40,6 +41,7 @@ const STATUS_COLORS: Record<number, string> = {
   6: '#0ea5e9',
 };
 
+// Model Roller
 const MODEL_ORDER = ['CPM 7726SW', 'PM 717-TW', 'CPM 7730SW'];
 const MODEL_COLORS: Record<string, string> = {
   'PM 717-TW': '#3b82f6',
@@ -47,13 +49,20 @@ const MODEL_COLORS: Record<string, string> = {
   'CPM 7730SW': '#f59e0b',
 };
 
-const HOLE_ORDER = ['2.5', '2.8', '3.5', '4.0'];
+// ✅ MỤC 6: Roller Shell Hole (mm)
+const SHELL_HOLE_ORDER = ['8x10', '8x12', '6x8', '6x9', '6x10', 'No Hole'];
+
 const LINE_ORDER = ['PL#1', 'PL#2', 'PL#3', 'PL#4', 'PL#5'];
-const PRESS_ORDER = [
-  '60-0', '60-5', '60-10', '60-15', '60-20', '60-45',
-  '65-0', '65-5', '65-10', '65-15', '65-45', '65-50',
-  '70-0', '70-5', '75-0',
+
+// ✅ MỤC 7: Roller Shell Type
+const SHELL_TYPE_ORDER = [
+  'Dimpled',
+  'Corrugate closed end',
+  'Corrugate open end',
+  'Corrugate with dimpled end',
+  'Fish bone',
 ];
+
 const SUPPLIER_ORDER = [
   'GRAF', 'MUNCH', 'JUMELIA', 'SHZY', 'FAMSUN', 'CPM',
   'KPI', 'BUHLER', 'ANDRITZ', 'PCE', 'SALMATEC',
@@ -97,17 +106,15 @@ function EmptyChart() {
 }
 
 // ============================================================
-// Dashboard
+// Dashboard Rollers
 // ============================================================
-export default function DashboardPage() {
+export default function DashboardPage1() {
   const { i18n } = useTranslation();
   const locale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
 
-  // ✅ Đọc theme hiện tại
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // ✅ Màu động theo theme (đen cho sáng, trắng cho tối)
   const TEXT_COLOR = isDark ? '#e5e7eb' : '#1f2937';
   const MUTED_COLOR = isDark ? '#94a3b8' : '#6b7280';
   const GRID_COLOR = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(148,163,184,0.3)';
@@ -130,18 +137,22 @@ export default function DashboardPage() {
     padding: '6px 10px',
   };
 
-  const worksQuery = useQuery({
-    queryKey: ['works', 'dashboard'],
-    queryFn: () => db.listWorks({ limit: 500 }),
+  // ✅ LẤY DỮ LIỆU TỪ BẢNG digital_roller_works
+  const rollersQuery = useQuery({
+    queryKey: ['rollers', 'dashboard'],
+    queryFn: () => db.listWorks({ limit: 500, type: 'roller' }),
   });
 
-  const works = useMemo(() => worksQuery.data?.documents ?? [], [worksQuery.data]);
+  const rollers = useMemo(
+    () => rollersQuery.data?.documents ?? [],
+    [rollersQuery.data],
+  );
 
   // ============================================================
   // Stats tổng
   // ============================================================
   const stats = useMemo(() => {
-    const total = works.length;
+    const total = rollers.length;
 
     let totalStandardTon = 0;
     let totalUsedTon = 0;
@@ -149,46 +160,53 @@ export default function DashboardPage() {
     let totalValue = 0;
 
     const byModel: Record<string, number> = {};
-    const byHole: Record<string, number> = {};
-    const byPressLength: Record<string, number> = {};
+    const byShellHole: Record<string, number> = {};   // ✅ MỤC 6
+    const byShellType: Record<string, number> = {};   // ✅ MỤC 7
     const byLine: Record<string, number> = {};
     const bySupplier: Record<string, number> = {};
     const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
     const lowLifeDanger: DigitalWork[] = [];
 
-    works.forEach((w) => {
-      const std = w.standard_ton != null ? Number(w.standard_ton) : 0;
-      const used = w.dies_life_ton != null ? Number(w.dies_life_ton) : 0;
+    rollers.forEach((r) => {
+      const std = r.standard_ton != null ? Number(r.standard_ton) : 0;
+      const used = r.dies_life_ton != null ? Number(r.dies_life_ton) : 0;
       const remaining = std - used;
 
       totalStandardTon += std;
       totalUsedTon += used;
       totalRemaining += remaining;
-      totalValue += w.dies_price_vnd != null ? Number(w.dies_price_vnd) : 0;
+      totalValue += r.dies_price_vnd != null ? Number(r.dies_price_vnd) : 0;
 
-      if (w.dies_model) byModel[w.dies_model] = (byModel[w.dies_model] ?? 0) + 1;
-      if (w.dies_hole_mm != null) {
-        const hole = String(w.dies_hole_mm);
-        byHole[hole] = (byHole[hole] ?? 0) + 1;
+      if (r.dies_model) byModel[r.dies_model] = (byModel[r.dies_model] ?? 0) + 1;
+
+      // ✅ MỤC 6: Roller Shell Hole — map từ dies_hole_mm (convert sang string)
+      if (r.dies_hole_mm != null) {
+        const hole = String(r.dies_hole_mm);
+        byShellHole[hole] = (byShellHole[hole] ?? 0) + 1;
       }
-      if (w.press_length_mm) byPressLength[w.press_length_mm] = (byPressLength[w.press_length_mm] ?? 0) + 1;
-      if (w.line_in_use) {
-        const lines = w.line_in_use.split(',').map((s) => s.trim()).filter(Boolean);
+
+      // ✅ MỤC 7: Roller Shell Type — map từ press_length_mm
+      if (r.press_length_mm) {
+        byShellType[r.press_length_mm] = (byShellType[r.press_length_mm] ?? 0) + 1;
+      }
+
+      if (r.line_in_use) {
+        const lines = r.line_in_use.split(',').map((s) => s.trim()).filter(Boolean);
         lines.forEach((l) => {
           byLine[l] = (byLine[l] ?? 0) + 1;
         });
       }
-      if (w.supplier) {
-        const sup = w.supplier.trim().toUpperCase();
+      if (r.supplier) {
+        const sup = r.supplier.trim().toUpperCase();
         bySupplier[sup] = (bySupplier[sup] ?? 0) + 1;
       }
-      if (w.status !== undefined) {
-        byStatus[Number(w.status)] = (byStatus[Number(w.status)] ?? 0) + 1;
+      if (r.status !== undefined) {
+        byStatus[Number(r.status)] = (byStatus[Number(r.status)] ?? 0) + 1;
       }
 
       if (std > 0 && remaining / std < 0.2 && remaining >= 0) {
-        lowLifeDanger.push(w);
+        lowLifeDanger.push(r);
       }
     });
 
@@ -204,8 +222,8 @@ export default function DashboardPage() {
       totalValue,
       overallPercent,
       byModel,
-      byHole,
-      byPressLength,
+      byShellHole,
+      byShellType,
       byLine,
       bySupplier,
       byStatus,
@@ -217,7 +235,7 @@ export default function DashboardPage() {
         return (bRem / bStd) - (aRem / aStd);
       }),
     };
-  }, [works]);
+  }, [rollers]);
 
   // ============================================================
   // Chart data
@@ -231,15 +249,17 @@ export default function DashboardPage() {
     }));
   }, [stats.byModel]);
 
-  const holeChartData = useMemo(() => {
-    const known = HOLE_ORDER.filter((h) => stats.byHole[h] != null);
-    return known.map((h) => ({ name: h, count: stats.byHole[h] }));
-  }, [stats.byHole]);
+  // ✅ MỤC 6: Chart data cho Roller Shell Hole
+  const shellHoleChartData = useMemo(() => {
+    const known = SHELL_HOLE_ORDER.filter((h) => stats.byShellHole[h] != null);
+    return known.map((h) => ({ name: h, count: stats.byShellHole[h] }));
+  }, [stats.byShellHole]);
 
-  const pressChartData = useMemo(() => {
-    const known = PRESS_ORDER.filter((p) => stats.byPressLength[p] != null);
-    return known.map((p) => ({ name: p, count: stats.byPressLength[p] }));
-  }, [stats.byPressLength]);
+  // ✅ MỤC 7: Chart data cho Roller Shell Type
+  const shellTypeChartData = useMemo(() => {
+    const known = SHELL_TYPE_ORDER.filter((t) => stats.byShellType[t] != null);
+    return known.map((t) => ({ name: t, count: stats.byShellType[t] }));
+  }, [stats.byShellType]);
 
   const lineChartData = useMemo(() => {
     const known = LINE_ORDER.filter((l) => stats.byLine[l] != null);
@@ -262,18 +282,11 @@ export default function DashboardPage() {
       }));
   }, [stats.byStatus]);
 
-  const press60Data = useMemo(() => pressChartData.filter((p) => p.name.startsWith('60-')), [pressChartData]);
-  const press65Data = useMemo(() => pressChartData.filter((p) => p.name.startsWith('65-')), [pressChartData]);
-  const press70Data = useMemo(
-    () => pressChartData.filter((p) => p.name.startsWith('70-') || p.name.startsWith('75-')),
-    [pressChartData],
-  );
-
   // ============================================================
   // Loading / Error
   // ============================================================
-  if (worksQuery.isLoading) return <LoadingOverlay />;
-  if (worksQuery.isError) return <ErrorState />;
+  if (rollersQuery.isLoading) return <LoadingOverlay />;
+  if (rollersQuery.isError) return <ErrorState />;
 
   return (
     <div
@@ -287,7 +300,7 @@ export default function DashboardPage() {
     >
       <div className="page-header mb-0">
         <div>
-          <h1 className="h4 mb-0">Tổng quan Dies</h1>
+          <h1 className="h4 mb-0">Dashboard Rollers</h1>
         </div>
       </div>
 
@@ -295,7 +308,7 @@ export default function DashboardPage() {
       <div className="row g-3">
         <div className="col-6 col-lg-3">
           <div className="card-surface h-100">
-            <div className="text-muted small">TỔNG SỐ DIE</div>
+            <div className="text-muted small">TỔNG SỐ ROLLER</div>
             <div className="fs-3 fw-bold">{fmtNum(stats.total)}</div>
             <div className="text-muted small">Đang quản lý</div>
           </div>
@@ -309,7 +322,7 @@ export default function DashboardPage() {
         </div>
         <div className="col-6 col-lg-3">
           <div className="card-surface h-100">
-            <div className="text-muted small">TỔNG GIÁ TRỊ DIES</div>
+            <div className="text-muted small">TỔNG GIÁ TRỊ ROLLER</div>
             <div className="fs-3 fw-bold" style={{ color: '#3b82f6' }}>
               {fmtNum(stats.totalValue)}
             </div>
@@ -336,10 +349,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Hàng 1: Model + Hole + Line */}
+      {/* Hàng 1: Model + Shell Hole + Line */}
       <div className="row g-3">
         <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Số lượng Die theo Model" height={260}>
+          <ChartCard title="📊 Số lượng Roller theo Model" height={260}>
             {modelChartData.length === 0 ? (
               <EmptyChart />
             ) : (
@@ -361,13 +374,14 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
+        {/* ✅ MỤC 6: Roller Shell Hole */}
         <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Số lượng Die theo Dies Hole (mm)" height={260}>
-            {holeChartData.length === 0 ? (
+          <ChartCard title="📊 Số lượng Roller theo Roller Shell Hole (mm)" height={260}>
+            {shellHoleChartData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={holeChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <BarChart data={shellHoleChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
@@ -382,7 +396,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Số lượng Die theo Line in use" height={260}>
+          <ChartCard title="📊 Số lượng Roller theo Line in use" height={260}>
             {lineChartData.length === 0 ? (
               <EmptyChart />
             ) : (
@@ -402,60 +416,35 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Hàng 2: Press Length */}
+      {/* ✅ Hàng 2: Roller Shell Type (thay cho Chiều dài Roller) */}
       <div className="row g-3">
-        <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Press Length 60-x (mm)" height={260}>
-            {press60Data.length === 0 ? (
+        <div className="col-12">
+          <ChartCard title="📊 Số lượng Roller theo Roller Shell Type" height={300}>
+            {shellTypeChartData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={press60Data} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <BarChart
+                  data={shellTypeChartData}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 60 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-                  <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={MUTED_COLOR}
+                    tick={{ fontSize: 11, fill: TEXT_COLOR }}
+                    angle={-25}
+                    textAnchor="end"
+                    height={70}
+                    interval={0}
+                  />
+                  <YAxis
+                    stroke={MUTED_COLOR}
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: TEXT_COLOR }}
+                  />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={50}>
-                    <LabelList dataKey="count" {...labelProps} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-        </div>
-
-        <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Press Length 65-x (mm)" height={260}>
-            {press65Data.length === 0 ? (
-              <EmptyChart />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={press65Data} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-                  <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#ec4899" radius={[6, 6, 0, 0]} maxBarSize={50}>
-                    <LabelList dataKey="count" {...labelProps} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCard>
-        </div>
-
-        <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Press Length 70-x / 75-x (mm)" height={260}>
-            {press70Data.length === 0 ? (
-              <EmptyChart />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={press70Data} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-                  <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#14b8a6" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={60}>
                     <LabelList dataKey="count" {...labelProps} />
                   </Bar>
                 </BarChart>
@@ -468,7 +457,7 @@ export default function DashboardPage() {
       {/* Hàng 3: Supplier + Status */}
       <div className="row g-3">
         <div className="col-12 col-lg-7">
-          <ChartCard title="📊 Số lượng Die theo Supplier" height={280}>
+          <ChartCard title="📊 Số lượng Roller theo Supplier" height={280}>
             {supplierChartData.length === 0 ? (
               <EmptyChart />
             ) : (
@@ -524,25 +513,26 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bảng Die sắp hết tuổi thọ */}
+      {/* Bảng Roller sắp hết tuổi thọ */}
       <div className="card-surface">
         <h6 className="mb-3">
-          ⚠️ Die sắp hết tuổi thọ (còn lại &lt; 20% tiêu chuẩn)
+          ⚠️ Roller sắp hết tuổi thọ (còn lại &lt; 20% tiêu chuẩn)
           {stats.lowLifeDanger.length > 0 && (
             <span className="badge bg-danger ms-2">{stats.lowLifeDanger.length}</span>
           )}
         </h6>
         {stats.lowLifeDanger.length === 0 ? (
-          <EmptyState message="Không có Die nào sắp hết tuổi thọ" />
+          <EmptyState message="Không có Roller nào sắp hết tuổi thọ" />
         ) : (
           <div className="table-responsive-wrap">
             <table className="table align-middle mb-0" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr>
                   <th>NO.</th>
-                  <th>Dies Model</th>
-                  <th>Dies Code</th>
-                  <th>Press Length</th>
+                  <th>Roller Model</th>
+                  <th>Roller Code</th>
+                  <th>Shell Hole</th>
+                  <th>Shell Type</th>
                   <th>Tiêu chuẩn (tấn)</th>
                   <th>Đã dùng (tấn)</th>
                   <th>Còn lại (tấn)</th>
@@ -550,17 +540,18 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {stats.lowLifeDanger.slice(0, 20).map((w, idx) => {
-                  const std = Number(w.standard_ton ?? 0);
-                  const used = Number(w.dies_life_ton ?? 0);
+                {stats.lowLifeDanger.slice(0, 20).map((r, idx) => {
+                  const std = Number(r.standard_ton ?? 0);
+                  const used = Number(r.dies_life_ton ?? 0);
                   const remaining = std - used;
                   const percent = std > 0 ? Math.round((remaining / std) * 100) : 0;
                   return (
-                    <tr key={w.id}>
+                    <tr key={r.id}>
                       <td>{idx + 1}</td>
-                      <td className="fw-semibold">{w.dies_model || '—'}</td>
-                      <td>{w.dies_code || '—'}</td>
-                      <td>{w.press_length_mm || '—'}</td>
+                      <td className="fw-semibold">{r.dies_model || '—'}</td>
+                      <td>{r.dies_code || '—'}</td>
+                      <td>{r.dies_hole_mm != null ? String(r.dies_hole_mm) : '—'}</td>
+                      <td>{r.press_length_mm || '—'}</td>
                       <td>{fmtNum(std)}</td>
                       <td>{fmtNum(used)}</td>
                       <td className="fw-semibold text-danger">{fmtNum(remaining)}</td>

@@ -1,40 +1,57 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as db from '../../../lib/db';
 
-export function useWorks(params: { page?: number; limit?: number; project_id?: number; assigned_to?: number } = {}) {
-  return useQuery({ queryKey: ['works', params], queryFn: () => db.listWorks(params) });
+// ✅ Thêm `type` vào params
+export function useWorks(params: {
+  page?: number;
+  limit?: number;
+  project_id?: number;
+  assigned_to?: number;
+  type?: 'die' | 'roller';
+} = {}) {
+  return useQuery({
+    // ✅ Thêm type vào queryKey để tránh cache lẫn giữa die và roller
+    queryKey: ['works', params.type ?? 'die', params],
+    queryFn: () => db.listWorks(params),
+  });
 }
 
+// ✅ SỬA: tách { payload, type } thành 2 arg riêng cho db.createWork
 export function useCreateWork() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: db.createWork,
+    mutationFn: ({ payload, type }: { payload: any; type?: 'die' | 'roller' }) =>
+      db.createWork(payload, type ?? 'die'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['works'] }),
   });
 }
 
+// ✅ SỬA: thêm type
 export function useUpdateWork() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Parameters<typeof db.updateWork>[1] }) =>
-      db.updateWork(id, payload),
+    mutationFn: ({ id, payload, type }: { id: number; payload: any; type?: 'die' | 'roller' }) =>
+      db.updateWork(id, payload, type ?? 'die'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['works'] }),
   });
 }
 
+// ✅ SỬA: thêm type
 export function useUpdateWorkProgress() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Parameters<typeof db.updateWorkProgress>[1] }) =>
-      db.updateWorkProgress(id, payload),
+    mutationFn: ({ id, payload, type }: { id: number; payload: any; type?: 'die' | 'roller' }) =>
+      db.updateWorkProgress(id, payload, type ?? 'die'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['works'] }),
   });
 }
 
+// ✅ SỬA: thêm type
 export function useDeleteWork() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: db.deleteWork,
+    mutationFn: ({ id, type }: { id: number; type?: 'die' | 'roller' }) =>
+      db.deleteWork(id, type ?? 'die'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['works'] }),
   });
 }
@@ -50,7 +67,7 @@ export function useTaskPlans(workId: number | null) {
 export function useCreateTaskPlan() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ workId, payload }: { workId: number; payload: Parameters<typeof db.createTaskPlan>[1] }) =>
+    mutationFn: ({ workId, payload }: { workId: number; payload: any }) =>
       db.createTaskPlan(workId, payload),
     onSuccess: (_data, variables) => queryClient.invalidateQueries({ queryKey: ['task-plans', variables.workId] }),
   });
@@ -59,7 +76,7 @@ export function useCreateTaskPlan() {
 export function useUpdateTaskPlan(workId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: Parameters<typeof db.updateTaskPlan>[1] }) =>
+    mutationFn: ({ id, payload }: { id: number; payload: any }) =>
       db.updateTaskPlan(id, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['task-plans', workId] }),
   });

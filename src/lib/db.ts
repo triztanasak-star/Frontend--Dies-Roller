@@ -1,6 +1,7 @@
 import client, { setAccessToken } from './adapters/nodeAdapter';
 
 export type Role = 'admin' | 'manager' | 'user';
+export type WorkType = 'die' | 'roller';
 
 export interface User {
   $id: string;
@@ -23,13 +24,12 @@ export interface Project {
   updated_at: string;
 }
 
-// Thêm cấu trúc kiểu dữ liệu cho hạng mục (milestone)
 export interface MilestoneItem {
   id: string | number;
   name: string;
   progress: number;
   status: string;
-  dueDate?: string; // 👈 ĐÃ THÊM: hạn hoàn thành của hạng mục (camelCase cho frontend)
+  dueDate?: string;
 }
 
 export interface DigitalWork {
@@ -67,7 +67,29 @@ export interface DigitalWork {
   rating: number | null;
   created_at: string;
   updated_at: string;
-  milestones?: MilestoneItem[]; // Bổ sung trường milestones tại đây
+  milestones?: MilestoneItem[];
+
+  // DIES_ROLLER FIELDS
+  dies_model: string | null;
+  dies_code: string | null;
+  symptom: string | null;
+  supplier: string | null;
+
+  // ✅ SỬA: Đổi từ number → string | number | null
+  // - Die: dies_hole_mm = 2.5, 2.8, 3.5, 4.0 (number)
+  // - Roller: dies_hole_mm = "8x10", "8x12", "No Hole" (string)
+  dies_hole_mm: string | number | null;
+
+  press_length_mm: string | null;
+  ld_ratio: number | null;
+  dies_life_ton: number | null;
+  standard_ton: number | null;
+  remaining_tons: number | null;
+  dies_price_vnd: number | null;
+  price_per_ton_vnd: number | null;
+  result_cost_per_ton_vnd: number | null;
+  line_in_use: string | null;
+  note: string | null;
 }
 
 export interface TaskPlan {
@@ -94,6 +116,18 @@ export interface WorkAttachment {
   category: string | null;
   uploaded_by: number | null;
   created_at: string;
+}
+
+// ✅ App Settings (đã thêm dies_model, press_length_mm, standard_ton)
+export interface AppSetting {
+  key: string;
+  value: string;
+  description: string | null;
+  press_length_mm: string | null;
+  standard_ton: number | null;
+  dies_model: string | null;
+  updated_at: string;
+  updated_by: number | null;
 }
 
 interface ListResponse<T> {
@@ -170,44 +204,100 @@ export const deleteProject = async (id: number) => {
   await client.delete(`/api/projects/${id}`);
 };
 
-// --- Digital Works ---
-export const listWorks = async (params: { page?: number; limit?: number; project_id?: number; assigned_to?: number } = {}) => {
+// ============================================================
+// --- Digital Works (HỖ TRỢ CẢ DIE VÀ ROLLER) ---
+// ============================================================
+
+/**
+ * ✅ List works - hỗ trợ type 'die' | 'roller'
+ * - type='die' (mặc định) → query bảng digital_works
+ * - type='roller' → query bảng digital_roller_works
+ */
+export const listWorks = async (params: {
+  page?: number;
+  limit?: number;
+  project_id?: number;
+  assigned_to?: number;
+  type?: WorkType;
+} = {}) => {
   const res = await client.get('/api/works', { params });
   return res.data as ListResponse<DigitalWork>;
 };
 
-export const createWork = async (payload: Partial<DigitalWork> & { task_name: string }) => {
-  const res = await client.post('/api/works', payload);
+/**
+ * ✅ Create work - truyền type qua query param
+ */
+export const createWork = async (
+  payload: Partial<DigitalWork> & { task_name: string },
+  type: WorkType = 'die'
+) => {
+  const res = await client.post('/api/works', payload, { params: { type } });
   return res.data as DigitalWork;
 };
 
-export const updateWork = async (id: number, payload: Partial<DigitalWork>) => {
-  const res = await client.put(`/api/works/${id}`, payload);
+/**
+ * ✅ Update work - truyền type qua query param
+ */
+export const updateWork = async (
+  id: number,
+  payload: Partial<DigitalWork>,
+  type: WorkType = 'die'
+) => {
+  const res = await client.put(`/api/works/${id}`, payload, { params: { type } });
   return res.data as DigitalWork;
 };
 
-export const updateWorkProgress = async (id: number, payload: Partial<DigitalWork>) => {
-  const res = await client.patch(`/api/works/${id}/progress`, payload);
+/**
+ * ✅ Update progress - truyền type qua query param
+ */
+export const updateWorkProgress = async (
+  id: number,
+  payload: Partial<DigitalWork>,
+  type: WorkType = 'die'
+) => {
+  const res = await client.patch(`/api/works/${id}/progress`, payload, { params: { type } });
   return res.data as DigitalWork;
 };
 
-export const deleteWork = async (id: number) => {
-  await client.delete(`/api/works/${id}`);
+/**
+ * ✅ Delete work - truyền type qua query param
+ */
+export const deleteWork = async (id: number, type: WorkType = 'die') => {
+  await client.delete(`/api/works/${id}`, { params: { type } });
 };
 
+/**
+ * ✅ Get work by ID cho trang public (QR scan) — KHÔNG cần auth
+ */
+export const getWorkPublic = async (id: number, type: WorkType = 'die') => {
+  const res = await client.get(`/api/works/${id}/public`, { params: { type } });
+  return res.data as DigitalWork;
+};
 
+// ============================================================
 // --- Task Plans ---
-export const listTaskPlans = async (workId: number) => {
-  const res = await client.get(`/api/works/${workId}/plans`);
-  // Hỗ trợ trả về cả 2 trường hợp: res.data chứa trực tiếp mảng hoặc nằm trong thuộc tính documents/data
+// ============================================================
+
+/**
+ * ✅ SỬA: Thêm param `type` để query plans cho Roller
+ */
+export const listTaskPlans = async (workId: number, type: WorkType = 'die') => {
+  const res = await client.get(`/api/works/${workId}/plans`, { params: { type } });
   if (Array.isArray(res.data)) {
     return { documents: res.data };
   }
   return res.data as { documents: TaskPlan[] };
 };
 
-export const createTaskPlan = async (workId: number, payload: { step_name: string; step_order?: number; due_date?: string; progress_percent?: number }) => {
-  const res = await client.post(`/api/works/${workId}/plans`, payload);
+/**
+ * ✅ SỬA: Thêm param `type` để tạo plan cho Roller
+ */
+export const createTaskPlan = async (
+  workId: number,
+  payload: { step_name: string; step_order?: number; due_date?: string; progress_percent?: number },
+  type: WorkType = 'die'
+) => {
+  const res = await client.post(`/api/works/${workId}/plans`, payload, { params: { type } });
   return res.data as TaskPlan;
 };
 
@@ -220,19 +310,32 @@ export const deleteTaskPlan = async (id: number) => {
   await client.delete(`/api/plans/${id}`);
 };
 
+// ============================================================
 // --- Work Attachments ---
-export const listAttachments = async (workId: number) => {
-  const res = await client.get(`/api/works/${workId}/attachments`);
+// ============================================================
+
+/**
+ * ✅ SỬA: Thêm param `type` để query attachments cho Roller
+ */
+export const listAttachments = async (workId: number, type: WorkType = 'die') => {
+  const res = await client.get(`/api/works/${workId}/attachments`, { params: { type } });
   return res.data as { documents: WorkAttachment[] };
 };
 
-export const uploadAttachments = async (workId: number, files: File[], category?: string) => {
+/**
+ * ✅ SỬA: Thêm param `type` để upload attachments cho Roller
+ */
+export const uploadAttachments = async (
+  workId: number,
+  files: File[],
+  category?: string,
+  type: WorkType = 'die'
+) => {
   const formData = new FormData();
   for (const file of files) formData.append('files', file);
   if (category) formData.append('category', category);
 
-  // Đã bỏ headers cứng để Axios tự động gắn token xác thực
-  const res = await client.post(`/api/works/${workId}/attachments`, formData);
+  const res = await client.post(`/api/works/${workId}/attachments`, formData, { params: { type } });
   return res.data as { documents: WorkAttachment[] };
 };
 
@@ -248,4 +351,35 @@ export const downloadAttachment = async (id: number, fileName: string) => {
   link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+};
+
+// --- App Settings ---
+export const listSettings = async () => {
+  const res = await client.get('/api/settings');
+  return res.data as { documents: AppSetting[] };
+};
+
+export const getSetting = async (key: string) => {
+  const res = await client.get(`/api/settings/${key}`);
+  return res.data as AppSetting;
+};
+
+// ✅ Update setting — hỗ trợ press_length_mm, standard_ton, dies_model
+export const updateSetting = async (
+  key: string,
+  payload: {
+    value: string;
+    description?: string;
+    press_length_mm?: string | null;
+    standard_ton?: number | null;
+    dies_model?: string | null;
+  }
+) => {
+  const res = await client.put(`/api/settings/${key}`, payload);
+  return res.data as AppSetting;
+};
+
+// ✅ Delete setting
+export const deleteSetting = async (key: string) => {
+  await client.delete(`/api/settings/${key}`);
 };

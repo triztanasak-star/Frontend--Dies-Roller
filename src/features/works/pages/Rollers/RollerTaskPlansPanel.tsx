@@ -1,22 +1,42 @@
 import { useMemo, useState, useRef, useEffect, type FormEvent } from 'react';
-import { useCreateTaskPlan, useDeleteTaskPlan, useTaskPlans, useUpdateTaskPlan } from '../hooks/useWorks';
-import EmptyState from '../../../components/EmptyState';
-import type { TaskPlan } from '../../../lib/db';
+// ✅ Sửa: thêm 1 cấp ../ vì file nằm trong thư mục Rollers/
+import { useCreateTaskPlan, useDeleteTaskPlan, useTaskPlans, useUpdateTaskPlan } from '../../hooks/useWorks';
+import EmptyState from '../../../../components/EmptyState';
+import type { TaskPlan } from '../../../../lib/db';
 
-const STATUS_LABEL: Record<TaskPlan['status'], string> = {
-  pending: 'Chưa bắt đầu',
-  in_progress: 'Đang thực hiện',
-  done: 'Hoàn thành',
+// ✅ Helper: Format số nguyên có dấu chấm phân cách hàng nghìn
+const formatNumber = (value: number | null | undefined): string => {
+  if (value === null || value === undefined || isNaN(Number(value))) return '';
+  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(Math.round(Number(value)));
 };
 
-export default function TaskPlansPanel({ workId, canEdit }: { workId: number; canEdit: boolean }) {
+// ✅ Helper: Parse chuỗi "2.000" → số 2000
+const parseFormattedNumber = (str: string): number | null => {
+  if (!str) return null;
+  const cleaned = String(str).replace(/\./g, '').replace(/,/g, '').trim();
+  if (!cleaned) return null;
+  const num = Number(cleaned);
+  return isNaN(num) ? null : num;
+};
+
+// ✅ Helper: Format input khi đang nhập: "2000" → "2.000"
+const formatInputValue = (str: string): string => {
+  if (!str) return '';
+  const cleaned = String(str).replace(/\./g, '').replace(/[^\d]/g, '');
+  if (!cleaned) return '';
+  return new Intl.NumberFormat('vi-VN').format(Number(cleaned));
+};
+
+export default function RollerTaskPlansPanel({ workId, canEdit }: { workId: number; canEdit: boolean }) {
   const { data, isLoading } = useTaskPlans(workId);
   const createPlan = useCreateTaskPlan();
   const updatePlan = useUpdateTaskPlan(workId);
   const deletePlan = useDeleteTaskPlan(workId);
 
   const [stepName, setStepName] = useState('');
-  const [dueDate, setDueDate] = useState('');  // 👈 STATE NGÀY
+  const [dueDate, setDueDate] = useState('');
+  const [tons, setTons] = useState('');
+  const [tonsInputs, setTonsInputs] = useState<Record<number, string>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -32,9 +52,13 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
     return [...raw].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
   }, [data]);
 
-  const averagePercent = useMemo(() => {
-    if (plans.length === 0) return null;
-    return Math.round(plans.reduce((sum, p) => sum + p.progress_percent, 0) / plans.length);
+  // ✅ Khi plans thay đổi, cập nhật state formatted cho từng plan
+  useEffect(() => {
+    const newInputs: Record<number, string> = {};
+    plans.forEach((p) => {
+      newInputs[p.id] = formatNumber(p.progress_percent);
+    });
+    setTonsInputs(newInputs);
   }, [plans]);
 
   const handleAdd = async (event: FormEvent) => {
@@ -45,12 +69,14 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
       workId,
       payload: {
         step_name: stepName,
-        ...(dueDate && { due_date: dueDate }),  // 👈 CHỈ GỬI KHI CÓ NGÀY
+        ...(dueDate && { due_date: dueDate }),
+        ...(tons !== '' && { progress_percent: Number(parseFormattedNumber(tons) ?? 0) }),
       },
     });
 
     setStepName('');
     setDueDate('');
+    setTons('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -58,13 +84,8 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
 
   return (
     <div className="mt-3">
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="mb-2">
         <h6 className="mb-0">Kế hoạch thực hiện (hạng mục)</h6>
-        {averagePercent !== null && (
-          <span className="text-muted small">
-            Tổng tiến độ trung bình: <strong>{averagePercent}%</strong>
-          </span>
-        )}
       </div>
 
       {canEdit && (
@@ -89,7 +110,17 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
             }}
           />
 
-          {/* 👇 INPUT DATE - FORM THÊM MỚI */}
+          <input
+            type="text"
+            inputMode="numeric"
+            className="form-control form-control-sm"
+            value={tons}
+            onChange={(e) => setTons(formatInputValue(e.target.value))}
+            placeholder="Số tấn"
+            style={{ width: 100, flexShrink: 0 }}
+            title="Số tấn"
+          />
+
           <input
             type="date"
             className="form-control form-control-sm"
@@ -119,7 +150,28 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
             <span className="flex-grow-1">{plan.step_name}</span>
             <div className="d-flex gap-2 align-items-center">
 
-              {/* 👇 INPUT DATE - MỖI DÒNG */}
+              <input
+                type="text"
+                inputMode="numeric"
+                className="form-control form-control-sm"
+                style={{ width: 100 }}
+                value={tonsInputs[plan.id] ?? ''}
+                disabled={!canEdit}
+                onChange={(e) => {
+                  const formatted = formatInputValue(e.target.value);
+                  setTonsInputs((prev) => ({ ...prev, [plan.id]: formatted }));
+                }}
+                onBlur={(e) => {
+                  const formatted = formatInputValue(e.target.value);
+                  const numValue = parseFormattedNumber(formatted) ?? 0;
+                  setTonsInputs((prev) => ({ ...prev, [plan.id]: formatNumber(numValue) }));
+                  if (numValue !== Number(plan.progress_percent)) {
+                    updatePlan.mutate({ id: plan.id, payload: { progress_percent: numValue } });
+                  }
+                }}
+              />
+              <span className="text-muted small">ton</span>
+
               <input
                 type="date"
                 className="form-control form-control-sm"
@@ -140,35 +192,6 @@ export default function TaskPlansPanel({ workId, canEdit }: { workId: number; ca
                 }}
               />
 
-              <input
-                type="number"
-                min={0}
-                max={100}
-                className="form-control form-control-sm"
-                style={{ width: 80 }}
-                defaultValue={plan.progress_percent}
-                disabled={!canEdit}
-                onBlur={(e) => {
-                  const value = Number(e.target.value);
-                  if (value !== plan.progress_percent) {
-                    updatePlan.mutate({ id: plan.id, payload: { progress_percent: value } });
-                  }
-                }}
-              />
-              <span className="text-muted small">%</span>
-              <select
-                className="form-select form-select-sm"
-                value={plan.status}
-                disabled={!canEdit}
-                onChange={(e) => updatePlan.mutate({
-                  id: plan.id,
-                  payload: { status: e.target.value as TaskPlan['status'] },
-                })}
-              >
-                {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
               {canEdit && (
                 <button
                   type="button"
