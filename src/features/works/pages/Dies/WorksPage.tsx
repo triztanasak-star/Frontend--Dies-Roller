@@ -46,10 +46,6 @@ function fmtNum(v: number | null | undefined): string {
   return new Intl.NumberFormat('vi-VN').format(Number(v));
 }
 
-/**
- * ✅ Format số với TỐI ĐA 1 chữ số thập phân.
- * VD: 2.50 → 2.5, 2.80 → 2.8, 3 → 3, 2.567 → 2.6
- */
 function fmtOneDecimal(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
@@ -94,8 +90,8 @@ function parsePressLength(str?: string | null): [number, number] {
 }
 
 /**
- * ✅ SỬA: Tra cứu standard_ton theo 3 thành phần (model | press_length | die_hole).
- * Ưu tiên key 3 thành phần, fallback về key 2 thành phần.
+ * ✅ BẮT BUỘC đủ 3: model + press_length + die_hole.
+ * Nếu thiếu bất kỳ thành phần nào → trả về 0 (không tính được).
  */
 function getStandardTonForMonths(
   work: DigitalWork,
@@ -105,19 +101,11 @@ function getStandardTonForMonths(
   const pl = String(work.press_length_mm ?? '').trim();
   const hole = work.dies_hole_mm != null ? String(work.dies_hole_mm).trim() : '';
 
-  // Ưu tiên key 3 thành phần
-  if (model && pl && hole) {
-    const key3 = `${model}|${pl}|${hole}`;
-    if (standardTonMap[key3] != null) return standardTonMap[key3];
-  }
+  // ❌ Thiếu 1 trong 3 → không tính
+  if (!model || !pl || !hole) return 0;
 
-  // Fallback key 2 thành phần
-  if (model && pl) {
-    const key2 = `${model}|${pl}`;
-    if (standardTonMap[key2] != null) return standardTonMap[key2];
-  }
-
-  return 0;
+  const key3 = `${model}|${pl}|${hole}`;
+  return standardTonMap[key3] ?? 0;
 }
 
 const cellCenter: React.CSSProperties = {
@@ -308,26 +296,22 @@ export default function WorksPage() {
   });
 
   /**
-   * ✅ SỬA: standardTonMap lưu CẢ key 2 thành phần (model|press) và
-   * key 3 thành phần (model|press|die_hole) để tra cứu chính xác.
+   * ✅ CHỈ lưu setting khi có đủ 3: model + press_length + die_hole.
+   * Bỏ qua setting thiếu die_hole.
    */
   const standardTonMap = useMemo(() => {
     const m: Record<string, number> = {};
     (settingsQuery.data?.documents ?? []).forEach((s) => {
-      if (s.dies_model && s.press_length_mm && s.standard_ton != null) {
-        const model = s.dies_model.trim();
-        const pl = s.press_length_mm.trim();
-        const ton = Number(s.standard_ton);
+      const model = s.dies_model ? String(s.dies_model).trim() : '';
+      const pl = s.press_length_mm ? String(s.press_length_mm).trim() : '';
+      const hole = s.die_hole != null ? String(s.die_hole).trim() : '';
 
-        // Key 2 thành phần (fallback)
-        m[`${model}|${pl}`] = ton;
+      // ❌ Thiếu 1 trong 3 → bỏ qua
+      if (!model || !pl || !hole) return;
+      if (s.standard_ton == null) return;
 
-        // Key 3 thành phần (chính xác, có die_hole)
-        if (s.die_hole != null && String(s.die_hole).trim()) {
-          const hole = String(s.die_hole).trim();
-          m[`${model}|${pl}|${hole}`] = ton;
-        }
-      }
+      const key3 = `${model}|${pl}|${hole}`;
+      m[key3] = Number(s.standard_ton);
     });
     return m;
   }, [settingsQuery.data]);
@@ -432,8 +416,8 @@ export default function WorksPage() {
   }, [works, fModel, fHole, fPressLength, fLine, fStatus, fYear, sortConfig]);
 
   /**
-   * ✅ SỬA: Tính tổng standard_ton của TẤT CẢ các dòng đang lọc
-   * (theo cả model + press_length + die_hole), rồi chia tổng remaining cho tổng đó.
+   * ✅ SỬA: Tính tổng standard_ton của TẤT CẢ các dòng đang lọc.
+   * Chỉ tính khi work có đủ 3: model + press + hole.
    */
   const summary = useMemo(() => {
     let totalRemaining = 0;
@@ -631,7 +615,13 @@ export default function WorksPage() {
                   DỰ KIẾN SỐ THÁNG
                 </div>
                 <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
-                  {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
+                  {summary.totalStandardTon > 0 ? (
+                    <>
+                      {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
+                    </>
+                  ) : (
+                    <span className="text-muted" style={{ fontSize: '0.85rem' }}>Chưa setting</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -791,7 +781,7 @@ export default function WorksPage() {
         </div>
       )}
 
-            <WorkFormModal
+      <WorkFormModal
         ref={formModalRef}
         projects={projectsQuery.data?.documents ?? []}
         users={usersQuery.data?.documents ?? []}
@@ -801,7 +791,7 @@ export default function WorksPage() {
 
       <WorkDetailModal work={selectedWork} onClose={() => setSelectedWork(null)} />
 
-      {/* ✅ Modal QR Code */}
+           {/* ✅ Modal QR Code */}
       {qrWork && (
         <div
           onClick={() => setQrWork(null)}
