@@ -14,15 +14,15 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-// ✅ Format số có dấu chấm phân cách và giữ phần thập phân (nếu có)
-function fmtNum(v: number | null | undefined): string {
-  if (v === null || v === undefined) return '—';
+function fmtNum(v: number | string | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (isNaN(n)) return String(v);
   return new Intl.NumberFormat('vi-VN', {
-    maximumFractionDigits: 3, // Giữ tối đa 3 số thập phân (ví dụ: 16.1, 2.80)
-  }).format(Number(v));
+    maximumFractionDigits: 3,
+  }).format(n);
 }
 
-// ✅ Format ngày giờ đầy đủ
 function fmtDateTime(dateStr?: string | null): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -52,8 +52,11 @@ export default function DiePublicPage() {
       color: 'var(--text-color, #e5e7eb)',
       padding: '24px 16px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      // ✅ THÊM 2 DÒNG NÀY ĐỂ CHO PHÉP VUỐT
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
     }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '40px' }}>
         
         {/* ============ HEADER ============ */}
         <div style={{
@@ -163,10 +166,7 @@ export default function DiePublicPage() {
   );
 }
 
-// ============================================================
-// CÁC COMPONENT & STYLE DÙNG CHUNG
-// ============================================================
-
+// ... (Các component SectionTitle, InfoCard, gridStyle, boxStyle giữ nguyên như cũ)
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',

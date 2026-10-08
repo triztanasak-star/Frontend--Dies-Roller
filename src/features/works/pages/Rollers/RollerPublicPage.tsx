@@ -14,17 +14,15 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-// ✅ Format số có dấu chấm phân cách và giữ phần thập phân (nếu có)
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
-  if (isNaN(n)) return String(v); // Nếu không parse được thành số → trả về string gốc
+  if (isNaN(n)) return String(v);
   return new Intl.NumberFormat('vi-VN', {
-    maximumFractionDigits: 3, // Giữ tối đa 3 số thập phân
+    maximumFractionDigits: 3,
   }).format(n);
 }
 
-// ✅ Format ngày giờ đầy đủ (Giờ:Phút:Giây DD/MM/YYYY)
 function fmtDateTime(dateStr?: string | null): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -32,7 +30,6 @@ function fmtDateTime(dateStr?: string | null): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-// ✅ Format ngày (Không có giờ) - Dùng cho Start Date
 function fmtDate(dateStr?: string | null): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -62,8 +59,11 @@ export default function RollerPublicPage() {
       color: 'var(--text-color, #e5e7eb)',
       padding: '24px 16px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
+      // ✅ THÊM 2 DÒNG NÀY ĐỂ CHO PHÉP VUỐT
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
     }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '40px' }}>
         
         {/* ============ HEADER ============ */}
         <div style={{
@@ -172,10 +172,7 @@ export default function RollerPublicPage() {
   );
 }
 
-// ============================================================
-// CÁC COMPONENT & STYLE DÙNG CHUNG
-// ============================================================
-
+// ... (Các component SectionTitle, InfoCard, gridStyle, boxStyle giữ nguyên như cũ)
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
