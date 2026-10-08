@@ -47,14 +47,13 @@ function fmtNum(v: number | null | undefined): string {
 }
 
 /**
- * ✅ MỚI: Format số với TỐI ĐA 1 chữ số thập phân.
+ * ✅ Format số với TỐI ĐA 1 chữ số thập phân.
  * VD: 2.50 → 2.5, 2.80 → 2.8, 3 → 3, 2.567 → 2.6
  */
 function fmtOneDecimal(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
   if (isNaN(n)) return String(v);
-  // Làm tròn 1 chữ số thập phân, bỏ số 0 thừa
   const rounded = Math.round(n * 10) / 10;
   return String(rounded);
 }
@@ -94,15 +93,30 @@ function parsePressLength(str?: string | null): [number, number] {
   return [first, second];
 }
 
-function getStandardTonForMonths(work: DigitalWork, standardTonMap: Record<string, number>): number {
+/**
+ * ✅ SỬA: Tra cứu standard_ton theo 3 thành phần (model | press_length | die_hole).
+ * Ưu tiên key 3 thành phần, fallback về key 2 thành phần.
+ */
+function getStandardTonForMonths(
+  work: DigitalWork,
+  standardTonMap: Record<string, number>
+): number {
   const model = String(work.dies_model ?? '').trim();
   const pl = String(work.press_length_mm ?? '').trim();
-  if (model && pl) {
-    const key = `${model}|${pl}`;
-    if (standardTonMap[key] != null) {
-      return standardTonMap[key];
-    }
+  const hole = work.dies_hole_mm != null ? String(work.dies_hole_mm).trim() : '';
+
+  // Ưu tiên key 3 thành phần
+  if (model && pl && hole) {
+    const key3 = `${model}|${pl}|${hole}`;
+    if (standardTonMap[key3] != null) return standardTonMap[key3];
   }
+
+  // Fallback key 2 thành phần
+  if (model && pl) {
+    const key2 = `${model}|${pl}`;
+    if (standardTonMap[key2] != null) return standardTonMap[key2];
+  }
+
   return 0;
 }
 
@@ -293,12 +307,26 @@ export default function WorksPage() {
     queryFn: () => db.listSettings(),
   });
 
+  /**
+   * ✅ SỬA: standardTonMap lưu CẢ key 2 thành phần (model|press) và
+   * key 3 thành phần (model|press|die_hole) để tra cứu chính xác.
+   */
   const standardTonMap = useMemo(() => {
     const m: Record<string, number> = {};
     (settingsQuery.data?.documents ?? []).forEach((s) => {
       if (s.dies_model && s.press_length_mm && s.standard_ton != null) {
-        const key = `${s.dies_model.trim()}|${s.press_length_mm.trim()}`;
-        m[key] = Number(s.standard_ton);
+        const model = s.dies_model.trim();
+        const pl = s.press_length_mm.trim();
+        const ton = Number(s.standard_ton);
+
+        // Key 2 thành phần (fallback)
+        m[`${model}|${pl}`] = ton;
+
+        // Key 3 thành phần (chính xác, có die_hole)
+        if (s.die_hole != null && String(s.die_hole).trim()) {
+          const hole = String(s.die_hole).trim();
+          m[`${model}|${pl}|${hole}`] = ton;
+        }
       }
     });
     return m;
@@ -403,32 +431,34 @@ export default function WorksPage() {
     return list;
   }, [works, fModel, fHole, fPressLength, fLine, fStatus, fYear, sortConfig]);
 
+  /**
+   * ✅ SỬA: Tính tổng standard_ton của TẤT CẢ các dòng đang lọc
+   * (theo cả model + press_length + die_hole), rồi chia tổng remaining cho tổng đó.
+   */
   const summary = useMemo(() => {
     let totalRemaining = 0;
+    let totalStandardTon = 0;
 
     filtered.forEach((w) => {
       const standardTon = w.standard_ton != null ? Number(w.standard_ton) : 0;
       const usedTon = w.dies_life_ton != null ? Number(w.dies_life_ton) : 0;
       const remaining = standardTon - usedTon;
       totalRemaining += remaining;
+
+      totalStandardTon += getStandardTonForMonths(w, standardTonMap);
     });
 
-    let standardTonForMonths = 0;
-    if (filtered.length > 0) {
-      standardTonForMonths = getStandardTonForMonths(filtered[0], standardTonMap);
-    }
-
-    const totalMonths = standardTonForMonths > 0
-      ? totalRemaining / standardTonForMonths
+    const totalMonths = totalStandardTon > 0
+      ? totalRemaining / totalStandardTon
       : 0;
 
     return {
       count: filtered.length,
       totalRemaining,
-      standardTonForMonths,
+      totalStandardTon,
       totalMonths,
     };
-  }, [filtered, plansByWork, standardTonMap]);
+  }, [filtered, standardTonMap]);
 
   const handleFormSubmit = async (values: WorkFormValues, editingId: number | null, isAssignMode: boolean) => {
     const payload: Partial<DigitalWork> = {
@@ -630,7 +660,6 @@ export default function WorksPage() {
                       )}
                     </th>
                     <th style={thStyle('80px')}>L/D RATIO</th>
-                    {/* ✅ CỘT MỚI: DIES CODE */}
                     <th style={thStyle('110px')}>Dies Code</th>
                     <th style={thStyle('120px')}>Dies Price (VND)</th>
                     <th style={thStyle('95px')}>Tiêu chuẩn (tấn)</th>
@@ -673,11 +702,9 @@ export default function WorksPage() {
                         <tr>
                           <td style={cellCenter}>{index + 1}</td>
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_model || '—'}</td>
-                          {/* ✅ SỬA: dùng fmtOneDecimal() để chỉ hiện 1 số lẻ (2.5 thay vì 2.50) */}
                           <td style={cellCenter}>{fmtOneDecimal(work.dies_hole_mm)}</td>
                           <td style={cellCenter}>{work.press_length_mm || '—'}</td>
                           <td style={cellCenter}>{work.ld_ratio ?? '—'}</td>
-                          {/* ✅ DIES CODE */}
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
                           <td style={cellCenter}>{fmtNum(standardTon)}</td>
@@ -764,7 +791,7 @@ export default function WorksPage() {
         </div>
       )}
 
-      <WorkFormModal
+            <WorkFormModal
         ref={formModalRef}
         projects={projectsQuery.data?.documents ?? []}
         users={usersQuery.data?.documents ?? []}
