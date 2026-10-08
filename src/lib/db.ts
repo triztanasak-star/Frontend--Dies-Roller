@@ -118,7 +118,7 @@ export interface WorkAttachment {
   created_at: string;
 }
 
-// ✅ App Settings (đã thêm dies_model, press_length_mm, standard_ton)
+// ✅ App Settings (đã thêm dies_model, press_length_mm, standard_ton, die_hole)
 export interface AppSetting {
   key: string;
   value: string;
@@ -126,6 +126,7 @@ export interface AppSetting {
   press_length_mm: string | null;
   standard_ton: number | null;
   dies_model: string | null;
+  die_hole: string | null; // ✅ THÊM DÒNG NÀY
   updated_at: string;
   updated_by: number | null;
 }
@@ -364,7 +365,7 @@ export const getSetting = async (key: string) => {
   return res.data as AppSetting;
 };
 
-// ✅ Update setting — hỗ trợ press_length_mm, standard_ton, dies_model
+// ✅ Update setting — hỗ trợ press_length_mm, standard_ton, dies_model, die_hole
 export const updateSetting = async (
   key: string,
   payload: {
@@ -373,6 +374,7 @@ export const updateSetting = async (
     press_length_mm?: string | null;
     standard_ton?: number | null;
     dies_model?: string | null;
+    die_hole?: string | null; // ✅ THÊM DÒNG NÀY
   }
 ) => {
   const res = await client.put(`/api/settings/${key}`, payload);
