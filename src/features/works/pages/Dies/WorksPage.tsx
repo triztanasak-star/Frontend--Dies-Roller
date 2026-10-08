@@ -46,6 +46,19 @@ function fmtNum(v: number | null | undefined): string {
   return new Intl.NumberFormat('vi-VN').format(Number(v));
 }
 
+/**
+ * ✅ MỚI: Format số với TỐI ĐA 1 chữ số thập phân.
+ * VD: 2.50 → 2.5, 2.80 → 2.8, 3 → 3, 2.567 → 2.6
+ */
+function fmtOneDecimal(v: number | string | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (isNaN(n)) return String(v);
+  // Làm tròn 1 chữ số thập phân, bỏ số 0 thừa
+  const rounded = Math.round(n * 10) / 10;
+  return String(rounded);
+}
+
 function toNum(v: any): number | null {
   if (v === null || v === undefined || v === '') return null;
   const n = Number(String(v).trim());
@@ -208,7 +221,6 @@ function MultiSelectFilter({
     </div>
   );
 }
-
 export default function WorksPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -452,7 +464,6 @@ export default function WorksPage() {
 
     if (isAssignMode) payload.workflow_status = 'approved';
 
-    // ✅ SỬA: truyền đúng dạng { payload } để khớp với hook
     if (editingId) {
       await updateWork.mutateAsync({ id: editingId, payload });
       if (values.files?.length) await db.uploadAttachments(editingId, values.files);
@@ -619,6 +630,8 @@ export default function WorksPage() {
                       )}
                     </th>
                     <th style={thStyle('80px')}>L/D RATIO</th>
+                    {/* ✅ CỘT MỚI: DIES CODE */}
+                    <th style={thStyle('110px')}>Dies Code</th>
                     <th style={thStyle('120px')}>Dies Price (VND)</th>
                     <th style={thStyle('95px')}>Tiêu chuẩn (tấn)</th>
                     <th style={thStyle('100px')}>Số tấn sử dụng</th>
@@ -644,7 +657,6 @@ export default function WorksPage() {
 
                     const vndPerTon = work.price_per_ton_vnd != null ? Number(work.price_per_ton_vnd) : null;
 
-                    // ✅ Lấy hình ảnh MỚI NHẤT (sort theo id giảm dần)
                     const images = (attachmentsByWork[work.id] || [])
                       .filter((a) => a.category === 'after_work' && a.mime_type?.startsWith('image/'))
                       .sort((a: any, b: any) => (b.id ?? 0) - (a.id ?? 0));
@@ -661,9 +673,12 @@ export default function WorksPage() {
                         <tr>
                           <td style={cellCenter}>{index + 1}</td>
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_model || '—'}</td>
-                          <td style={cellCenter}>{work.dies_hole_mm ?? '—'}</td>
+                          {/* ✅ SỬA: dùng fmtOneDecimal() để chỉ hiện 1 số lẻ (2.5 thay vì 2.50) */}
+                          <td style={cellCenter}>{fmtOneDecimal(work.dies_hole_mm)}</td>
                           <td style={cellCenter}>{work.press_length_mm || '—'}</td>
                           <td style={cellCenter}>{work.ld_ratio ?? '—'}</td>
+                          {/* ✅ DIES CODE */}
+                          <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
                           <td style={cellCenter}>{fmtNum(standardTon)}</td>
                           <td style={cellCenter}>{fmtNum(usedTons)}</td>
@@ -709,7 +724,6 @@ export default function WorksPage() {
                               <button type="button" className="btn btn-sm btn-link p-0" title="Xem chi tiết" onClick={() => setSelectedWork(work)}>
                                 <FiEye />
                               </button>
-                              {/* ✅ Nút Xem ảnh dùng latestImage */}
                               {latestImage && (
                                 <button type="button" className="btn btn-sm btn-link p-0" title="Xem ảnh" onClick={() => setZoomImage(latestImage.url)}>
                                   <FiImage />
@@ -728,7 +742,6 @@ export default function WorksPage() {
                                 <FiEdit2 />
                               </button>
                               {isManagerOrAdmin && (
-                                // ✅ SỬA: bọc work.id trong object { id, type }
                                 <button
                                   type="button"
                                   className="btn btn-sm btn-link text-danger p-0"
@@ -761,7 +774,7 @@ export default function WorksPage() {
 
       <WorkDetailModal work={selectedWork} onClose={() => setSelectedWork(null)} />
 
-           {/* ✅ Modal QR Code */}
+      {/* ✅ Modal QR Code */}
       {qrWork && (
         <div
           onClick={() => setQrWork(null)}
@@ -788,23 +801,22 @@ export default function WorksPage() {
             }}
           >
             <h5 style={{ color: '#1f2937', marginBottom: 4 }}>
-  {qrWork.dies_model || 'Die'}
-  {/* ✅ Thêm Dies Hole và Press Length ngay sau dấu gạch */}
-  {(qrWork.dies_hole_mm || qrWork.press_length_mm) && (
-    <span style={{ color: '#6b7280', fontWeight: 400 }}>
-      {' — '}
-      {[
-        qrWork.dies_hole_mm != null ? `⌀${qrWork.dies_hole_mm}mm` : null,
-        qrWork.press_length_mm || null,
-      ]
-        .filter(Boolean)
-        .join(' · ')}
-    </span>
-  )}
-</h5>
-<p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
-  {qrWork.dies_code || ''}
-</p>
+              {qrWork.dies_model || 'Die'}
+              {(qrWork.dies_hole_mm || qrWork.press_length_mm) && (
+                <span style={{ color: '#6b7280', fontWeight: 400 }}>
+                  {' — '}
+                  {[
+                    qrWork.dies_hole_mm != null ? `⌀${fmtOneDecimal(qrWork.dies_hole_mm)}mm` : null,
+                    qrWork.press_length_mm || null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              )}
+            </h5>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
+              {qrWork.dies_code || ''}
+            </p>
 
             <QRCodeSVG
               value={`${window.location.origin}/die/${qrWork.id}`}

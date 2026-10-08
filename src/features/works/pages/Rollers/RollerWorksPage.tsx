@@ -224,10 +224,6 @@ function MultiSelectFilter({
     </div>
   );
 }
-
-// ============================================================
-// Main Component
-// ============================================================
 export default function RollerWorksPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -406,7 +402,8 @@ export default function RollerWorksPage() {
 
     return list;
   }, [works, fModel, fHole, fShellType, fLine, fStatus, fYear, sortConfig]);
-    const summary = useMemo(() => {
+
+  const summary = useMemo(() => {
     let totalRemaining = 0;
 
     filtered.forEach((w) => {
@@ -638,7 +635,8 @@ export default function RollerWorksPage() {
                         </span>
                       )}
                     </th>
-
+                    {/* ✅ CỘT MỚI: ROLLER CODE */}
+                    <th style={thStyle('110px')}>Roller Code</th>
                     <th style={thStyle('120px')}>Roller Price (VND)</th>
                     <th style={thStyle('95px')}>Tiêu chuẩn (tấn)</th>
                     <th style={thStyle('100px')}>Số tấn sử dụng</th>
@@ -682,6 +680,8 @@ export default function RollerWorksPage() {
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_model || '—'}</td>
                           <td style={cellCenter}>{work.dies_hole_mm ?? '—'}</td>
                           <td style={cellCenter}>{work.press_length_mm || '—'}</td>
+                          {/* ✅ ROLLER CODE */}
+                          <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
                           <td style={cellCenter}>{fmtNum(standardTon)}</td>
                           <td style={cellCenter}>{fmtNum(usedTons)}</td>
@@ -807,24 +807,23 @@ export default function RollerWorksPage() {
               cursor: 'default',
             }}
           >
-           <h5 style={{ color: '#1f2937', marginBottom: 4 }}>
-  {qrWork.dies_model || 'Roller'}
-  {/* ✅ Thêm Roller Shell Hole và Roller Shell Type ngay sau dấu gạch */}
-  {(qrWork.dies_hole_mm || qrWork.press_length_mm) && (
-    <span style={{ color: '#6b7280', fontWeight: 400 }}>
-      {' — '}
-      {[
-        qrWork.dies_hole_mm ? String(qrWork.dies_hole_mm) : null,
-        qrWork.press_length_mm || null,
-      ]
-        .filter(Boolean)
-        .join(' · ')}
-    </span>
-  )}
-</h5>
-<p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
-  {qrWork.dies_code || ''}
-</p>
+            <h5 style={{ color: '#1f2937', marginBottom: 4 }}>
+              {qrWork.dies_model || 'Roller'}
+              {(qrWork.dies_hole_mm || qrWork.press_length_mm) && (
+                <span style={{ color: '#6b7280', fontWeight: 400 }}>
+                  {' — '}
+                  {[
+                    qrWork.dies_hole_mm ? String(qrWork.dies_hole_mm) : null,
+                    qrWork.press_length_mm || null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              )}
+            </h5>
+            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
+              {qrWork.dies_code || ''}
+            </p>
 
             <QRCodeSVG
               value={`${window.location.origin}/roller/${qrWork.id}`}
