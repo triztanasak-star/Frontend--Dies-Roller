@@ -1,6 +1,15 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { listTaskPlans, createTaskPlan, updateTaskPlan, deleteTaskPlan, uploadAttachments, type DigitalWork, type MilestoneItem } from '../../../../lib/db';
+// ✅ SỬA: Import thêm listAttachments để load ảnh cũ (nếu cần), và giữ nguyên các hàm khác
+import { 
+  listTaskPlans, 
+  createTaskPlan, 
+  updateTaskPlan, 
+  deleteTaskPlan, 
+  uploadAttachments, 
+  type DigitalWork, 
+  type MilestoneItem 
+} from '../../../../lib/db';
 
 export interface ProgressFormValues {
   status: number;
@@ -183,7 +192,8 @@ const RollerProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, Progress
         setResultCostInput(resultCost != null ? formatNumber(resultCost) : '');
 
         try {
-          const res: any = await listTaskPlans(work.id);
+          // ✅ SỬA: Truyền 'roller' để lấy đúng plans của Roller
+          const res: any = await listTaskPlans(work.id, 'roller');
           const rawList = Array.isArray(res) ? res : (res?.documents || res?.data || []);
           const loadedPlans = rawList.map((p: any) => ({
             id: p.id,
@@ -237,12 +247,13 @@ const RollerProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, Progress
     const handleAddMilestone = async () => {
       if (!newMilestoneName.trim() || !workId) return;
       try {
+        // ✅ SỬA: Truyền 'roller' vào tham số thứ 3
         const createdPlan = await createTaskPlan(workId, {
           step_name: newMilestoneName.trim(),
           step_order: milestones.length + 1,
           progress_percent: newMilestoneTons ? (parseFormattedNumber(newMilestoneTons) ?? 0) : 0,
           due_date: newMilestoneDueDate || undefined,
-        });
+        }, 'roller');
 
         const newItem: MilestoneItem = {
           id: createdPlan.id,
@@ -350,11 +361,12 @@ const RollerProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, Progress
 
         await onSubmit(workId, payload);
 
+        // ✅ SỬA: Truyền 'roller' vào tham số thứ 4 của uploadAttachments
         if (beforeImages.length > 0) {
-          await uploadAttachments(workId, beforeImages, 'before_work');
+          await uploadAttachments(workId, beforeImages, 'before_work', 'roller');
         }
         if (afterWorkImages.length > 0) {
-          await uploadAttachments(workId, afterWorkImages, 'after_work');
+          await uploadAttachments(workId, afterWorkImages, 'after_work', 'roller');
         }
 
         handleClose();

@@ -452,12 +452,15 @@ export default function WorksPage() {
 
     if (isAssignMode) payload.workflow_status = 'approved';
 
+    // ✅ SỬA: truyền đúng dạng { payload } để khớp với hook
     if (editingId) {
       await updateWork.mutateAsync({ id: editingId, payload });
       if (values.files?.length) await db.uploadAttachments(editingId, values.files);
     } else {
-      const created = await createWork.mutateAsync(payload as any);
-      if (values.files?.length) await db.uploadAttachments(created.id, values.files);
+      const created = await createWork.mutateAsync({ payload });
+      if (values.files?.length && created?.id) {
+        await db.uploadAttachments(created.id, values.files);
+      }
     }
 
     await queryClient.invalidateQueries({ queryKey: ['works'] });
@@ -725,7 +728,13 @@ export default function WorksPage() {
                                 <FiEdit2 />
                               </button>
                               {isManagerOrAdmin && (
-                                <button type="button" className="btn btn-sm btn-link text-danger p-0" title="Xóa" onClick={() => deleteWork.mutate(work.id)}>
+                                // ✅ SỬA: bọc work.id trong object { id, type }
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link text-danger p-0"
+                                  title="Xóa"
+                                  onClick={() => deleteWork.mutate({ id: work.id, type: 'die' })}
+                                >
                                   <FiTrash2 />
                                 </button>
                               )}
@@ -752,7 +761,7 @@ export default function WorksPage() {
 
       <WorkDetailModal work={selectedWork} onClose={() => setSelectedWork(null)} />
 
-      {/* ✅ Modal QR Code */}
+           {/* ✅ Modal QR Code */}
       {qrWork && (
         <div
           onClick={() => setQrWork(null)}
@@ -812,7 +821,8 @@ export default function WorksPage() {
         </div>
       )}
 
-           {zoomImage && (
+      {/* ✅ Modal Zoom Image */}
+      {zoomImage && (
         <div
           onClick={() => setZoomImage(null)}
           style={{

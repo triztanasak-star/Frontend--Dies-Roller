@@ -31,8 +31,10 @@ function fmtDateTime(dateStr: string | null | undefined, locale: string): string
 // ============================================================
 function WorkAttachmentsList({ workId, category }: { workId: number; category?: 'after_work' | 'before_work' }) {
   const { data } = useQuery({
-    queryKey: ['work_attachments', workId],
-    queryFn: () => db.listAttachments(workId),
+    // ✅ SỬA: Thêm 'roller' vào queryKey để cache riêng
+    queryKey: ['work_attachments', workId, 'roller'],
+    // ✅ SỬA: Truyền 'roller' để lấy đúng attachments của Roller
+    queryFn: () => db.listAttachments(workId, 'roller'),
   });
 
   const attachments = (data?.documents ?? []).filter((f: any) =>
