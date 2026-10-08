@@ -54,16 +54,20 @@ export default function RollerPublicPage() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      // ✅ FIX: Dùng height auto + minHeight 100% thay vì 100vh
+      height: 'auto',
+      minHeight: '100%',
       background: 'var(--card-bg, #0f172a)',
       color: 'var(--text-color, #e5e7eb)',
       padding: '24px 16px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      // ✅ THÊM 2 DÒNG NÀY ĐỂ CHO PHÉP VUỐT
+      // ✅ FIX: Cho phép cuộn dọc, chặn cuộn ngang
       overflowY: 'auto',
+      overflowX: 'hidden',
       WebkitOverflowScrolling: 'touch',
+      touchAction: 'pan-y',
     }}>
-      <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '40px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '60px' }}>
         
         {/* ============ HEADER ============ */}
         <div style={{
