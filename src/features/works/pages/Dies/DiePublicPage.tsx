@@ -14,16 +14,20 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
+// ✅ Format số có dấu chấm phân cách và giữ phần thập phân (nếu có)
 function fmtNum(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—';
-  return new Intl.NumberFormat('vi-VN').format(Number(v));
+  return new Intl.NumberFormat('vi-VN', {
+    maximumFractionDigits: 3, // Giữ tối đa 3 số thập phân (ví dụ: 16.1, 2.80)
+  }).format(Number(v));
 }
 
-function fmtDate(dateStr?: string | null): string {
+// ✅ Format ngày giờ đầy đủ
+function fmtDateTime(dateStr?: string | null): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '—';
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
 export default function DiePublicPage() {
@@ -50,7 +54,8 @@ export default function DiePublicPage() {
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* Header */}
+        
+        {/* ============ HEADER ============ */}
         <div style={{
           background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
           padding: '24px',
@@ -69,7 +74,7 @@ export default function DiePublicPage() {
           </div>
         </div>
 
-        {/* Status badge */}
+        {/* ============ STATUS BADGE ============ */}
         <div style={{
           display: 'inline-block',
           padding: '6px 16px',
@@ -78,65 +83,76 @@ export default function DiePublicPage() {
           borderRadius: 999,
           fontSize: '0.85rem',
           fontWeight: 600,
-          marginBottom: 16,
+          marginBottom: 20,
         }}>
           {STATUS_LABELS[Number(work.status)] ?? '—'}
         </div>
 
-        {/* Info Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 12,
-          marginBottom: 20,
-        }}>
+        {/* ============ PHẦN 1: THÔNG TIN DIES ============ */}
+        <SectionTitle title="📦 THÔNG TIN DIES" />
+        <div style={gridStyle}>
           <InfoCard label="Dies Model" value={work.dies_model} />
-          <InfoCard label="Dies Code" value={work.dies_code} />
+          <InfoCard label="Dies Code (Mã khuôn)" value={work.dies_code} />
           <InfoCard label="Supplier" value={work.supplier} />
-          <InfoCard label="Dies Hole (mm)" value={fmtNum(work.dies_hole_mm)} />
+          <InfoCard label="Dies Hole (mm)" value={work.dies_hole_mm} />
           <InfoCard label="Press Length (mm)" value={work.press_length_mm} />
-          <InfoCard label="L/D Ratio" value={fmtNum(work.ld_ratio)} />
+          <InfoCard label="L/D Ratio" value={work.ld_ratio} />
           <InfoCard label="Line in use" value={work.line_in_use} />
-          <InfoCard label="Tiêu chuẩn (tấn)" value={fmtNum(work.standard_ton)} />
-          <InfoCard label="Số tấn đã dùng" value={fmtNum(work.dies_life_ton)} />
-          <InfoCard label="Số tấn còn lại" value={fmtNum(work.remaining_tons)} highlight />
-          <InfoCard label="Giá Dies (VND)" value={fmtNum(work.dies_price_vnd)} />
-          <InfoCard label="VNĐ/tấn" value={fmtNum(work.price_per_ton_vnd)} />
         </div>
 
-        {/* Symptom / Note */}
+        {/* ============ PHẦN 2: TẤN & GIÁ ============ */}
+        <SectionTitle title="📊 TẤN & GIÁ" />
+        <div style={gridStyle}>
+          <InfoCard label="Tiêu chuẩn (tấn)" value={fmtNum(work.standard_ton)} />
+          <InfoCard label="Số tấn sử dụng" value={fmtNum(work.dies_life_ton)} />
+          <InfoCard label="Số tấn còn lại" value={fmtNum(work.remaining_tons)} highlight />
+          <InfoCard label="Giá Die (VND)" value={fmtNum(work.dies_price_vnd)} />
+          <InfoCard label="VNĐ/tấn" value={fmtNum(work.price_per_ton_vnd)} />
+          <InfoCard label="VNĐ/tấn Standard" value={fmtNum(work.result_cost_per_ton_vnd)} />
+        </div>
+
+        {/* ============ PHẦN 3: NGÀY THÁNG ============ */}
+        <SectionTitle title="📅 NGÀY THÁNG" />
+        <div style={gridStyle}>
+          <InfoCard label="Ngày nhập kho (Ngày tạo)" value={fmtDateTime(work.created_at)} />
+          <InfoCard label="Start Date" value={fmtDateTime(work.expected_deadline)} />
+          <InfoCard label="End Date (Hoàn thành)" value={fmtDateTime(work.completed_at)} />
+        </div>
+
+        {/* ============ PHẦN 4: GHI CHÚ / SYMPTOM ============ */}
         {work.symptom && (
-          <div style={{
-            background: 'rgba(148, 163, 184, 0.1)',
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 20,
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-          }}>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 6 }}>
-              GHI CHÚ / SYMPTOM
-            </div>
-            <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
+          <>
+            <SectionTitle title="📝 GHI CHÚ / SYMPTOM" />
+            <div style={boxStyle}>
               {work.symptom}
             </div>
-          </div>
+          </>
         )}
 
-        {/* Dates */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 12,
-        }}>
-          <InfoCard label="Ngày nhập kho" value={fmtDate(work.created_at)} />
-          <InfoCard label="Start Date" value={fmtDate(work.expected_deadline)} />
-          <InfoCard label="End Date" value={fmtDate(work.completed_at)} />
-        </div>
+        {/* ============ PHẦN 5: LỊCH SỬ DIE ============ */}
+        {work.progress_comment && (
+          <>
+            <SectionTitle title="🕓 LỊCH SỬ DIE" />
+            <div style={boxStyle}>
+              {work.progress_comment}
+            </div>
+          </>
+        )}
 
-        {/* Footer */}
+        {/* ============ PHẦN 6: BÌNH LUẬN QUẢN LÝ ============ */}
+        {work.manager_comment && (
+          <>
+            <SectionTitle title="👔 BÌNH LUẬN QUẢN LÝ" />
+            <div style={boxStyle}>
+              {work.manager_comment}
+            </div>
+          </>
+        )}
+
+        {/* ============ FOOTER ============ */}
         <div style={{
           textAlign: 'center',
-          marginTop: 32,
+          marginTop: 40,
           fontSize: '0.8rem',
           color: '#64748b',
         }}>
@@ -147,6 +163,43 @@ export default function DiePublicPage() {
   );
 }
 
+// ============================================================
+// CÁC COMPONENT & STYLE DÙNG CHUNG
+// ============================================================
+
+const gridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  gap: 12,
+  marginBottom: 24,
+};
+
+const boxStyle = {
+  background: 'rgba(148, 163, 184, 0.1)',
+  padding: 16,
+  borderRadius: 8,
+  marginBottom: 24,
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  fontSize: '0.95rem',
+  whiteSpace: 'pre-wrap' as const,
+  lineHeight: '1.6',
+};
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <h6 style={{
+      fontSize: '0.85rem',
+      fontWeight: 700,
+      color: '#94a3b8',
+      textTransform: 'uppercase',
+      marginBottom: 12,
+      marginTop: 0,
+    }}>
+      {title}
+    </h6>
+  );
+}
+
 function InfoCard({ label, value, highlight }: { label: string; value: any; highlight?: boolean }) {
   return (
     <div style={{
@@ -154,14 +207,18 @@ function InfoCard({ label, value, highlight }: { label: string; value: any; high
       border: highlight ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(148, 163, 184, 0.15)',
       borderRadius: 8,
       padding: 12,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
     }}>
       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 4, fontWeight: 600 }}>
         {label}
       </div>
       <div style={{
-        fontSize: '1rem',
+        fontSize: '0.95rem',
         fontWeight: 600,
         color: highlight ? '#22c55e' : '#e5e7eb',
+        wordBreak: 'break-word',
       }}>
         {value ?? '—'}
       </div>

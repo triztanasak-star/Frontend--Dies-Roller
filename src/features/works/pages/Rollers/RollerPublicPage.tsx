@@ -14,14 +14,25 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-// ✅ SỬA: Nhận cả string (vì dies_hole_mm có thể là "8x12", "No Hole"...)
+// ✅ Format số có dấu chấm phân cách và giữ phần thập phân (nếu có)
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
-  if (isNaN(n)) return String(v);   // Nếu không parse được thành số → trả về string gốc
-  return new Intl.NumberFormat('vi-VN').format(n);
+  if (isNaN(n)) return String(v); // Nếu không parse được thành số → trả về string gốc
+  return new Intl.NumberFormat('vi-VN', {
+    maximumFractionDigits: 3, // Giữ tối đa 3 số thập phân
+  }).format(n);
 }
 
+// ✅ Format ngày giờ đầy đủ (Giờ:Phút:Giây DD/MM/YYYY)
+function fmtDateTime(dateStr?: string | null): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+// ✅ Format ngày (Không có giờ) - Dùng cho Start Date
 function fmtDate(dateStr?: string | null): string {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
@@ -35,7 +46,6 @@ export default function RollerPublicPage() {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['roller-public', workId],
-    // ✅ SỬA: Truyền 'roller' để backend query bảng digital_roller_works
     queryFn: () => db.getWorkPublic(workId, 'roller'),
     enabled: !isNaN(workId) && workId > 0,
   });
@@ -54,7 +64,8 @@ export default function RollerPublicPage() {
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* Header */}
+        
+        {/* ============ HEADER ============ */}
         <div style={{
           background: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
           padding: '24px',
@@ -73,7 +84,7 @@ export default function RollerPublicPage() {
           </div>
         </div>
 
-        {/* Status badge */}
+        {/* ============ STATUS BADGE ============ */}
         <div style={{
           display: 'inline-block',
           padding: '6px 16px',
@@ -82,67 +93,75 @@ export default function RollerPublicPage() {
           borderRadius: 999,
           fontSize: '0.85rem',
           fontWeight: 600,
-          marginBottom: 16,
+          marginBottom: 20,
         }}>
           {STATUS_LABELS[Number(work.status)] ?? '—'}
         </div>
 
-        {/* Info Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 12,
-          marginBottom: 20,
-        }}>
+        {/* ============ PHẦN 1: THÔNG TIN ROLLER ============ */}
+        <SectionTitle title="📦 THÔNG TIN ROLLER" />
+        <div style={gridStyle}>
           <InfoCard label="Roller Model" value={work.dies_model} />
-          <InfoCard label="Roller Code" value={work.dies_code} />
+          <InfoCard label="Roller Code (Mã trục)" value={work.dies_code} />
           <InfoCard label="Supplier" value={work.supplier} />
-          {/* ✅ SỬA: Roller Shell Hole (thay vì Roller Hole) */}
           <InfoCard label="Roller Shell Hole (mm)" value={fmtNum(work.dies_hole_mm)} />
-          {/* ✅ SỬA: Roller Shell Type (thay vì Press Length) */}
           <InfoCard label="Roller Shell Type" value={work.press_length_mm} />
-          {/* ✅ XÓA: L/D Ratio (không dùng cho Roller) */}
           <InfoCard label="Line in use" value={work.line_in_use} />
+        </div>
+
+        {/* ============ PHẦN 2: TẤN & GIÁ ============ */}
+        <SectionTitle title="📊 TẤN & GIÁ" />
+        <div style={gridStyle}>
           <InfoCard label="Tiêu chuẩn (tấn)" value={fmtNum(work.standard_ton)} />
-          <InfoCard label="Số tấn đã dùng" value={fmtNum(work.dies_life_ton)} />
+          <InfoCard label="Số tấn sử dụng" value={fmtNum(work.dies_life_ton)} />
           <InfoCard label="Số tấn còn lại" value={fmtNum(work.remaining_tons)} highlight />
           <InfoCard label="Giá Roller (VND)" value={fmtNum(work.dies_price_vnd)} />
           <InfoCard label="VNĐ/tấn" value={fmtNum(work.price_per_ton_vnd)} />
+          <InfoCard label="VNĐ/tấn Standard" value={fmtNum(work.result_cost_per_ton_vnd)} />
         </div>
 
-        {/* Symptom / Note */}
+        {/* ============ PHẦN 3: NGÀY THÁNG ============ */}
+        <SectionTitle title="📅 NGÀY THÁNG" />
+        <div style={gridStyle}>
+          <InfoCard label="Ngày nhập kho (Ngày tạo)" value={fmtDateTime(work.created_at)} />
+          <InfoCard label="Start Date" value={fmtDate(work.expected_deadline)} />
+          <InfoCard label="End Date (Hoàn thành)" value={fmtDateTime(work.completed_at)} />
+        </div>
+
+        {/* ============ PHẦN 4: GHI CHÚ / SYMPTOM ============ */}
         {work.symptom && (
-          <div style={{
-            background: 'rgba(148, 163, 184, 0.1)',
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 20,
-            border: '1px solid rgba(148, 163, 184, 0.2)',
-          }}>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: 6 }}>
-              GHI CHÚ / SYMPTOM
-            </div>
-            <div style={{ fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
+          <>
+            <SectionTitle title="📝 GHI CHÚ / SYMPTOM" />
+            <div style={boxStyle}>
               {work.symptom}
             </div>
-          </div>
+          </>
         )}
 
-        {/* Dates */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 12,
-        }}>
-          <InfoCard label="Ngày nhập kho" value={fmtDate(work.created_at)} />
-          <InfoCard label="Start Date" value={fmtDate(work.expected_deadline)} />
-          <InfoCard label="End Date" value={fmtDate(work.completed_at)} />
-        </div>
+        {/* ============ PHẦN 5: LỊCH SỬ ROLLER ============ */}
+        {work.progress_comment && (
+          <>
+            <SectionTitle title="🕓 LỊCH SỬ ROLLER" />
+            <div style={boxStyle}>
+              {work.progress_comment}
+            </div>
+          </>
+        )}
 
-        {/* Footer */}
+        {/* ============ PHẦN 6: BÌNH LUẬN QUẢN LÝ ============ */}
+        {work.manager_comment && (
+          <>
+            <SectionTitle title="👔 BÌNH LUẬN QUẢN LÝ" />
+            <div style={boxStyle}>
+              {work.manager_comment}
+            </div>
+          </>
+        )}
+
+        {/* ============ FOOTER ============ */}
         <div style={{
           textAlign: 'center',
-          marginTop: 32,
+          marginTop: 40,
           fontSize: '0.8rem',
           color: '#64748b',
         }}>
@@ -153,6 +172,43 @@ export default function RollerPublicPage() {
   );
 }
 
+// ============================================================
+// CÁC COMPONENT & STYLE DÙNG CHUNG
+// ============================================================
+
+const gridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  gap: 12,
+  marginBottom: 24,
+};
+
+const boxStyle = {
+  background: 'rgba(148, 163, 184, 0.1)',
+  padding: 16,
+  borderRadius: 8,
+  marginBottom: 24,
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  fontSize: '0.95rem',
+  whiteSpace: 'pre-wrap' as const,
+  lineHeight: '1.6',
+};
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <h6 style={{
+      fontSize: '0.85rem',
+      fontWeight: 700,
+      color: '#94a3b8',
+      textTransform: 'uppercase',
+      marginBottom: 12,
+      marginTop: 0,
+    }}>
+      {title}
+    </h6>
+  );
+}
+
 function InfoCard({ label, value, highlight }: { label: string; value: any; highlight?: boolean }) {
   return (
     <div style={{
@@ -160,14 +216,18 @@ function InfoCard({ label, value, highlight }: { label: string; value: any; high
       border: highlight ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(148, 163, 184, 0.15)',
       borderRadius: 8,
       padding: 12,
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
     }}>
       <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: 4, fontWeight: 600 }}>
         {label}
       </div>
       <div style={{
-        fontSize: '1rem',
+        fontSize: '0.95rem',
         fontWeight: 600,
         color: highlight ? '#22c55e' : '#e5e7eb',
+        wordBreak: 'break-word',
       }}>
         {value ?? '—'}
       </div>
