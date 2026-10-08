@@ -181,6 +181,7 @@ function MultiSelectFilter({
             maxHeight: 260,
             overflowY: 'auto',
             background: 'var(--card-bg, #1a1d2e)',
+            color: 'var(--text-color, #ffffff)',   // ✅ THÊM DÒNG NÀY
             border: '1px solid rgba(148, 163, 184, 0.25)',
             borderRadius: 6,
             padding: 8,
