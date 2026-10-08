@@ -788,11 +788,23 @@ export default function WorksPage() {
             }}
           >
             <h5 style={{ color: '#1f2937', marginBottom: 4 }}>
-              {qrWork.dies_model || 'Die'}
-            </h5>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
-              {qrWork.dies_code || ''}
-            </p>
+  {qrWork.dies_model || 'Die'}
+  {/* ✅ Thêm Dies Hole và Press Length ngay sau dấu gạch */}
+  {(qrWork.dies_hole_mm || qrWork.press_length_mm) && (
+    <span style={{ color: '#6b7280', fontWeight: 400 }}>
+      {' — '}
+      {[
+        qrWork.dies_hole_mm != null ? `⌀${qrWork.dies_hole_mm}mm` : null,
+        qrWork.press_length_mm || null,
+      ]
+        .filter(Boolean)
+        .join(' · ')}
+    </span>
+  )}
+</h5>
+<p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
+  {qrWork.dies_code || ''}
+</p>
 
             <QRCodeSVG
               value={`${window.location.origin}/die/${qrWork.id}`}

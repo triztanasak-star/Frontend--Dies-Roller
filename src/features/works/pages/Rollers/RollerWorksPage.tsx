@@ -807,12 +807,24 @@ export default function RollerWorksPage() {
               cursor: 'default',
             }}
           >
-            <h5 style={{ color: '#1f2937', marginBottom: 4 }}>
-              {qrWork.dies_model || 'Roller'}
-            </h5>
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
-              {qrWork.dies_code || ''}
-            </p>
+           <h5 style={{ color: '#1f2937', marginBottom: 4 }}>
+  {qrWork.dies_model || 'Roller'}
+  {/* ✅ Thêm Roller Shell Hole và Roller Shell Type ngay sau dấu gạch */}
+  {(qrWork.dies_hole_mm || qrWork.press_length_mm) && (
+    <span style={{ color: '#6b7280', fontWeight: 400 }}>
+      {' — '}
+      {[
+        qrWork.dies_hole_mm ? String(qrWork.dies_hole_mm) : null,
+        qrWork.press_length_mm || null,
+      ]
+        .filter(Boolean)
+        .join(' · ')}
+    </span>
+  )}
+</h5>
+<p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: 20 }}>
+  {qrWork.dies_code || ''}
+</p>
 
             <QRCodeSVG
               value={`${window.location.origin}/roller/${qrWork.id}`}
