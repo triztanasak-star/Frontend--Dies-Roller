@@ -34,7 +34,6 @@ const formatInputValue = (str: string): string => {
   return new Intl.NumberFormat('vi-VN').format(Number(cleaned));
 };
 
-// ✅ SỬA 1: Thêm prefix "die_" để tách biệt với Roller
 const makeStdKey = (modelLabel: string, pressLength: string) => {
   const modelSlug = modelLabel.replace(/[\s-]/g, '_');
   const plSlug = pressLength.replace(/-/g, '_');
@@ -45,14 +44,12 @@ export default function SettingsPage() {
   const { can } = useAuth();
   const isManagerOrAdmin = can('manager-or-admin');
 
-  // ✅ SỬA 2: Thêm 'die' vào queryKey để tách cache React Query
   const { data, isLoading } = useQuery({
     queryKey: ['settings', 'die'],
     queryFn: () => db.listSettings(),
   });
 
   const pressLengthByModel = new Map<string, AppSetting[]>();
-  // ✅ SỬA 3: Chỉ lấy setting có key bắt đầu bằng "std_die_"
   (data?.documents ?? [])
     .filter((s) => s.key?.startsWith('std_die_'))
     .forEach((s) => {
@@ -98,6 +95,7 @@ function ModelPressLengthSection({
   const queryClient = useQueryClient();
   const [newPressLength, setNewPressLength] = useState('');
   const [newStandardTon, setNewStandardTon] = useState('');
+  const [newDieHole, setNewDieHole] = useState(''); // ✅ Thêm state cho Die hole
   const [adding, setAdding] = useState(false);
 
   const usedSet = new Set(standards.map((s) => s.press_length_mm));
@@ -122,11 +120,12 @@ function ModelPressLengthSection({
         dies_model: modelLabel,
         press_length_mm: newPressLength,
         standard_ton: stdTon,
+        die_hole: newDieHole.trim(), // ✅ Lưu Die hole
       });
-      // ✅ SỬA 4: invalidate đúng cache của Dies
       await queryClient.invalidateQueries({ queryKey: ['settings', 'die'] });
       setNewPressLength('');
       setNewStandardTon('');
+      setNewDieHole(''); // ✅ Reset
     } catch (e) {
       alert('Lỗi thêm tiêu chuẩn');
       console.error(e);
@@ -140,7 +139,7 @@ function ModelPressLengthSection({
       <h6 className="text-muted mb-3">🔧 MODEL: {modelLabel}</h6>
 
       {canEdit && (
-        <div className="d-flex gap-2 mb-3 align-items-center" style={{ maxWidth: 600 }}>
+        <div className="d-flex gap-2 mb-3 align-items-center" style={{ maxWidth: 800 }}>
           <select
             className="form-select"
             style={{ width: 220 }}
@@ -161,6 +160,16 @@ function ModelPressLengthSection({
             placeholder="Tiêu chuẩn (tấn)"
             value={newStandardTon}
             onChange={(e) => setNewStandardTon(formatInputValue(e.target.value))}
+          />
+
+          {/* ✅ Ô nhập Die hole */}
+          <input
+            type="text"
+            className="form-control"
+            style={{ width: 180 }}
+            placeholder="Die hole"
+            value={newDieHole}
+            onChange={(e) => setNewDieHole(e.target.value)}
           />
 
           <button
@@ -201,6 +210,7 @@ function PressLengthCard({
   const [standardTonInput, setStandardTonInput] = useState(
     setting.standard_ton != null ? formatNumber(setting.standard_ton) : ''
   );
+  const [dieHoleInput, setDieHoleInput] = useState(setting.die_hole ?? ''); // ✅ State cho Die hole
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -208,11 +218,13 @@ function PressLengthCard({
     setStandardTonInput(
       setting.standard_ton != null ? formatNumber(setting.standard_ton) : ''
     );
-  }, [setting.standard_ton]);
+    setDieHoleInput(setting.die_hole ?? ''); // ✅ Cập nhật khi setting thay đổi
+  }, [setting.standard_ton, setting.die_hole]);
 
   const currentNum = setting.standard_ton ?? 0;
   const inputNum = parseFormattedNumber(standardTonInput) ?? 0;
-  const dirty = inputNum !== currentNum;
+  const dirty =
+    inputNum !== currentNum || dieHoleInput !== (setting.die_hole ?? ''); // ✅ Kiểm tra thay đổi cả Die hole
 
   const handleSave = async () => {
     if (!canEdit) return;
@@ -227,8 +239,8 @@ function PressLengthCard({
         dies_model: setting.dies_model,
         press_length_mm: setting.press_length_mm,
         standard_ton: inputNum,
+        die_hole: dieHoleInput.trim(), // ✅ Lưu Die hole
       });
-      // ✅ SỬA 5: invalidate đúng cache của Dies
       await queryClient.invalidateQueries({ queryKey: ['settings', 'die'] });
     } catch (e) {
       alert('Lỗi lưu');
@@ -244,7 +256,6 @@ function PressLengthCard({
     setDeleting(true);
     try {
       await db.deleteSetting(setting.key);
-      // ✅ SỬA 6: invalidate đúng cache của Dies
       await queryClient.invalidateQueries({ queryKey: ['settings', 'die'] });
     } catch (e) {
       alert('Lỗi xóa');
@@ -288,6 +299,19 @@ function PressLengthCard({
             onChange={(e) => setStandardTonInput(formatInputValue(e.target.value))}
             disabled={!canEdit}
             placeholder="VD: 30.000"
+          />
+        </div>
+
+        {/* ✅ Ô nhập Die hole trong card */}
+        <div className="mb-3">
+          <label className="form-label small">Die hole</label>
+          <input
+            type="text"
+            className="form-control"
+            value={dieHoleInput}
+            onChange={(e) => setDieHoleInput(e.target.value)}
+            disabled={!canEdit}
+            placeholder="Nhập Die hole"
           />
         </div>
 
