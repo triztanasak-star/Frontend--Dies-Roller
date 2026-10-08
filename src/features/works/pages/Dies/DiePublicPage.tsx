@@ -14,6 +14,9 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
+// ✅ Helper: kiểm tra mobile (chạy 1 lần khi render)
+const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
@@ -45,17 +48,33 @@ export default function DiePublicPage() {
 
   const work = data;
 
+  // ✅ Style cho wrapper: mobile dùng fixed, desktop giữ nguyên
+  const wrapperStyle: React.CSSProperties = isMobile
+    ? {
+        // ===== MOBILE: tách hoàn toàn khỏi .app-shell =====
+        position: 'fixed',
+        inset: 0,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        background: 'var(--card-bg, #0f172a)',
+        color: 'var(--text-color, #e5e7eb)',
+        padding: '24px 16px',
+        paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }
+    : {
+        // ===== DESKTOP: giữ nguyên như cũ =====
+        minHeight: '100vh',
+        background: 'var(--card-bg, #0f172a)',
+        color: 'var(--text-color, #e5e7eb)',
+        padding: '24px 16px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      };
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--card-bg, #0f172a)',
-      color: 'var(--text-color, #e5e7eb)',
-      padding: '24px 16px',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      // ✅ THÊM 2 DÒNG NÀY ĐỂ CHO PHÉP VUỐT
-      overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
-    }}>
+    <div style={wrapperStyle}>
       <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '40px' }}>
         
         {/* ============ HEADER ============ */}
@@ -166,7 +185,7 @@ export default function DiePublicPage() {
   );
 }
 
-// ... (Các component SectionTitle, InfoCard, gridStyle, boxStyle giữ nguyên như cũ)
+// ... (Các component SectionTitle, InfoCard, gridStyle, boxStyle giữ nguyên)
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',

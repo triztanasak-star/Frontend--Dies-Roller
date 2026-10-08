@@ -14,6 +14,9 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
+// ✅ Helper: kiểm tra mobile
+const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
@@ -52,22 +55,34 @@ export default function RollerPublicPage() {
 
   const work = data;
 
+  // ✅ Style cho wrapper: mobile dùng fixed, desktop giữ nguyên
+  const wrapperStyle: React.CSSProperties = isMobile
+    ? {
+        // ===== MOBILE: tách hoàn toàn khỏi .app-shell =====
+        position: 'fixed',
+        inset: 0,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        background: 'var(--card-bg, #0f172a)',
+        color: 'var(--text-color, #e5e7eb)',
+        padding: '24px 16px',
+        paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }
+    : {
+        // ===== DESKTOP: giữ nguyên như cũ =====
+        minHeight: '100vh',
+        background: 'var(--card-bg, #0f172a)',
+        color: 'var(--text-color, #e5e7eb)',
+        padding: '24px 16px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      };
+
   return (
-    <div style={{
-      // ✅ FIX: Dùng height auto + minHeight 100% thay vì 100vh
-      height: 'auto',
-      minHeight: '100%',
-      background: 'var(--card-bg, #0f172a)',
-      color: 'var(--text-color, #e5e7eb)',
-      padding: '24px 16px',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      // ✅ FIX: Cho phép cuộn dọc, chặn cuộn ngang
-      overflowY: 'auto',
-      overflowX: 'hidden',
-      WebkitOverflowScrolling: 'touch',
-      touchAction: 'pan-y',
-    }}>
-      <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '60px' }}>
+    <div style={wrapperStyle}>
+      <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: '40px' }}>
         
         {/* ============ HEADER ============ */}
         <div style={{

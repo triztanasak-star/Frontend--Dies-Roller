@@ -357,3 +357,32 @@
     flex: 1 1 100% !important;
   }
 }
+/* ============ FIX MOBILE ONLY ============ */
+@media (max-width: 768px) {
+  html, body, #root {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .app-shell {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    min-height: 100dvh !important;
+  }
+
+  .app-sidebar {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Nếu có class .app-main / .app-content thì thêm vào */
+  .app-main, .app-content {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
