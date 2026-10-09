@@ -93,26 +93,21 @@ function parsePressLength(str?: string | null): [number, number] {
    ✅ Chuẩn hoá 3 trường để so khớp Settings <-> Works
    ========================================================= */
 
-/** Model: bỏ khoảng trắng thừa, uppercase */
 function normModel(v: any): string {
   return String(v ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
 }
 
-/** Press Length: bỏ mọi khoảng trắng, giữ nguyên dấu "-" */
 function normPress(v: any): string {
   return String(v ?? '').replace(/\s/g, '').trim();
 }
 
-/** Die hole: chuẩn hoá số — "2.50" và 2.5 → "2.5"; rỗng → "" */
 function normHole(v: any): string {
   if (v === null || v === undefined || v === '') return '';
   const n = Number(v);
   if (isNaN(n)) return String(v).trim();
-  // Bỏ trailing zeros: 2.50 → 2.5 ; 3.00 → 3
   return String(Number(n.toFixed(2)));
 }
 
-/** Key 3 trường — dùng chung cho cả 2 phía */
 function makeStdKey3(model: any, press: any, hole: any): string {
   return `${normModel(model)}|${normPress(press)}|${normHole(hole)}`;
 }
@@ -325,7 +320,6 @@ export default function WorksPage() {
 
   /* =========================================================
      ✅ standardTonMap — key 3 trường: "MODEL|PRESS|HOLE"
-     Dùng chung helper makeStdKey3 / normModel / normPress / normHole
      ========================================================= */
   const standardTonMap = useMemo(() => {
     const m: Record<string, number> = {};
@@ -353,6 +347,29 @@ export default function WorksPage() {
       });
     }
   }, [standardTonMap, works]);
+
+  /* =========================================================
+     ✅ filterComboStandardTon — Tiêu chuẩn tấn của combo đang lọc
+     Hiển thị trên widget toolbar ngay khu vực vẽ đỏ
+     ========================================================= */
+  const filterComboStandardTon = useMemo(() => {
+    const modelSel = fModel.length === 1 ? fModel[0] : null;
+    const holeSel  = fHole.length === 1 ? fHole[0] : null;
+    const pressSel = fPressLength.length === 1 ? fPressLength[0] : null;
+
+    if (!modelSel || !holeSel || !pressSel) return null;
+
+    const key = makeStdKey3(modelSel, pressSel, holeSel);
+    const ton = standardTonMap[key];
+
+    return {
+      model: modelSel,
+      hole: holeSel,
+      press: pressSel,
+      ton: ton ?? null,
+      key,
+    };
+  }, [fModel, fHole, fPressLength, standardTonMap]);
 
   useEffect(() => {
     if (works.length === 0) return;
@@ -452,15 +469,11 @@ export default function WorksPage() {
     return list;
   }, [works, fModel, fHole, fPressLength, fLine, fStatus, fYear, sortConfig]);
 
-  /* =========================================================
-     ✅ Summary — dùng cùng 1 nguồn: getStandardTonForMonths
-     ========================================================= */
   const summary = useMemo(() => {
     let totalRemaining = 0;
     let totalStandardTon = 0;
 
     filtered.forEach((w) => {
-      // ✅ Lấy từ Settings theo key 3 trường
       const settingTon = getStandardTonForMonths(w, standardTonMap);
       const standardTon =
         settingTon > 0
@@ -623,6 +636,55 @@ export default function WorksPage() {
               </button>
             )}
 
+            {/* ✅ Widget: Tiêu chuẩn tấn đọc từ Settings — hiển thị ngay khu toolbar */}
+            {filterComboStandardTon && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '6px 12px',
+                  background:
+                    filterComboStandardTon.ton != null
+                      ? 'rgba(34, 197, 94, 0.12)'
+                      : 'rgba(239, 68, 68, 0.12)',
+                  border: `1px solid ${
+                    filterComboStandardTon.ton != null
+                      ? 'rgba(34, 197, 94, 0.5)'
+                      : 'rgba(239, 68, 68, 0.5)'
+                  }`,
+                  borderRadius: 8,
+                  fontSize: '0.8rem',
+                  whiteSpace: 'nowrap',
+                }}
+                title={`Settings key: ${filterComboStandardTon.key}`}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                  <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
+                    TIÊU CHUẨN ĐANG LỌC
+                  </span>
+                  <span style={{ color: '#cbd5e1', fontSize: '0.7rem' }}>
+                    {filterComboStandardTon.model} · ⌀{filterComboStandardTon.hole} · {filterComboStandardTon.press}
+                  </span>
+                </div>
+
+                <div style={{ width: 1, height: 28, background: 'rgba(148,163,184,0.3)' }} />
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>TẤN</div>
+                  {filterComboStandardTon.ton != null ? (
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
+                      {fmtNum(filterComboStandardTon.ton)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ef4444' }}>
+                      Chưa cấu hình
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div
               style={{
                 marginLeft: 'auto',
@@ -707,9 +769,7 @@ export default function WorksPage() {
 
                     const plans = plansByWork[work.id] || [];
 
-                    /* =========================================================
-                       ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 3 trường
-                       ========================================================= */
+                    /* ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 3 trường */
                     const settingTon = getStandardTonForMonths(work, standardTonMap);
                     const standardTon = settingTon > 0
                       ? settingTon
