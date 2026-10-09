@@ -89,23 +89,49 @@ function parsePressLength(str?: string | null): [number, number] {
   return [first, second];
 }
 
+/* =========================================================
+   ✅ Chuẩn hoá 3 trường để so khớp Settings <-> Works
+   ========================================================= */
+
+/** Model: bỏ khoảng trắng thừa, uppercase */
+function normModel(v: any): string {
+  return String(v ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
+}
+
+/** Press Length: bỏ mọi khoảng trắng, giữ nguyên dấu "-" */
+function normPress(v: any): string {
+  return String(v ?? '').replace(/\s/g, '').trim();
+}
+
+/** Die hole: chuẩn hoá số — "2.50" và 2.5 → "2.5"; rỗng → "" */
+function normHole(v: any): string {
+  if (v === null || v === undefined || v === '') return '';
+  const n = Number(v);
+  if (isNaN(n)) return String(v).trim();
+  // Bỏ trailing zeros: 2.50 → 2.5 ; 3.00 → 3
+  return String(Number(n.toFixed(2)));
+}
+
+/** Key 3 trường — dùng chung cho cả 2 phía */
+function makeStdKey3(model: any, press: any, hole: any): string {
+  return `${normModel(model)}|${normPress(press)}|${normHole(hole)}`;
+}
+
 /**
- * ✅ BẮT BUỘC đủ 3: model + press_length + die_hole.
- * Nếu thiếu bất kỳ thành phần nào → trả về 0 (không tính được).
+ * ✅ Tra "Tiêu chuẩn (tấn)" từ Settings theo key 3 trường.
+ * Thiếu 1 trong 3 → trả 0.
  */
 function getStandardTonForMonths(
   work: DigitalWork,
   standardTonMap: Record<string, number>
 ): number {
-  const model = String(work.dies_model ?? '').trim();
-  const pl = String(work.press_length_mm ?? '').trim();
-  const hole = work.dies_hole_mm != null ? String(work.dies_hole_mm).trim() : '';
+  const model = normModel(work.dies_model);
+  const pl = normPress(work.press_length_mm);
+  const hole = normHole(work.dies_hole_mm);
 
-  // ❌ Thiếu 1 trong 3 → không tính
   if (!model || !pl || !hole) return 0;
 
-  const key3 = `${model}|${pl}|${hole}`;
-  return standardTonMap[key3] ?? 0;
+  return standardTonMap[`${model}|${pl}|${hole}`] ?? 0;
 }
 
 const cellCenter: React.CSSProperties = {
@@ -180,7 +206,7 @@ function MultiSelectFilter({
             maxHeight: 260,
             overflowY: 'auto',
             background: 'var(--card-bg, #1a1d2e)',
-            color: 'var(--text-color, #ffffff)',   // ✅ THÊM DÒNG NÀY
+            color: 'var(--text-color, #ffffff)',
             border: '1px solid rgba(148, 163, 184, 0.25)',
             borderRadius: 6,
             padding: 8,
@@ -224,6 +250,7 @@ function MultiSelectFilter({
     </div>
   );
 }
+
 export default function WorksPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -296,26 +323,36 @@ export default function WorksPage() {
     queryFn: () => db.listSettings(),
   });
 
-  /**
-   * ✅ CHỈ lưu setting khi có đủ 3: model + press_length + die_hole.
-   * Bỏ qua setting thiếu die_hole.
-   */
+  /* =========================================================
+     ✅ standardTonMap — key 3 trường: "MODEL|PRESS|HOLE"
+     Dùng chung helper makeStdKey3 / normModel / normPress / normHole
+     ========================================================= */
   const standardTonMap = useMemo(() => {
     const m: Record<string, number> = {};
     (settingsQuery.data?.documents ?? []).forEach((s) => {
-      const model = s.dies_model ? String(s.dies_model).trim() : '';
-      const pl = s.press_length_mm ? String(s.press_length_mm).trim() : '';
-      const hole = s.die_hole != null ? String(s.die_hole).trim() : '';
+      const model = normModel(s.dies_model);
+      const pl = normPress(s.press_length_mm);
+      const hole = normHole(s.die_hole);
 
-      // ❌ Thiếu 1 trong 3 → bỏ qua
       if (!model || !pl || !hole) return;
       if (s.standard_ton == null) return;
 
-      const key3 = `${model}|${pl}|${hole}`;
-      m[key3] = Number(s.standard_ton);
+      m[`${model}|${pl}|${hole}`] = Number(s.standard_ton);
     });
     return m;
   }, [settingsQuery.data]);
+
+  // Debug — xoá sau khi xác nhận chạy đúng
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('=== standardTonMap ===');
+      console.table(standardTonMap);
+      works.slice(0, 5).forEach((w) => {
+        const k = makeStdKey3(w.dies_model, w.press_length_mm, w.dies_hole_mm);
+        console.log(k, '→', standardTonMap[k] ?? 'NOT FOUND');
+      });
+    }
+  }, [standardTonMap, works]);
 
   useEffect(() => {
     if (works.length === 0) return;
@@ -359,8 +396,7 @@ export default function WorksPage() {
     fetchAttachments();
     return () => { cancelled = true; };
   }, [works]);
-
-  const filtered = useMemo(() => {
+    const filtered = useMemo(() => {
     const norm = (v: any) => String(v ?? '').toLowerCase().trim();
     const list = works.filter((w) => {
       if (fModel.length > 0) {
@@ -416,26 +452,29 @@ export default function WorksPage() {
     return list;
   }, [works, fModel, fHole, fPressLength, fLine, fStatus, fYear, sortConfig]);
 
-  /**
-   * ✅ SỬA: Tính tổng standard_ton của TẤT CẢ các dòng đang lọc.
-   * Chỉ tính khi work có đủ 3: model + press + hole.
-   */
+  /* =========================================================
+     ✅ Summary — dùng cùng 1 nguồn: getStandardTonForMonths
+     ========================================================= */
   const summary = useMemo(() => {
     let totalRemaining = 0;
     let totalStandardTon = 0;
 
     filtered.forEach((w) => {
-      const standardTon = w.standard_ton != null ? Number(w.standard_ton) : 0;
+      // ✅ Lấy từ Settings theo key 3 trường
+      const settingTon = getStandardTonForMonths(w, standardTonMap);
+      const standardTon =
+        settingTon > 0
+          ? settingTon
+          : (w.standard_ton != null ? Number(w.standard_ton) : 0);
+
       const usedTon = w.dies_life_ton != null ? Number(w.dies_life_ton) : 0;
       const remaining = standardTon - usedTon;
       totalRemaining += remaining;
 
-      totalStandardTon += getStandardTonForMonths(w, standardTonMap);
+      totalStandardTon += settingTon;
     });
 
-    const totalMonths = totalStandardTon > 0
-      ? totalRemaining / totalStandardTon
-      : 0;
+    const totalMonths = totalStandardTon > 0 ? totalRemaining / totalStandardTon : 0;
 
     return {
       count: filtered.length,
@@ -518,12 +557,8 @@ export default function WorksPage() {
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => {
-      if (!prev || prev.key !== key) {
-        return { key, direction: 'asc' };
-      }
-      if (prev.direction === 'asc') {
-        return { key, direction: 'desc' };
-      }
+      if (!prev || prev.key !== key) return { key, direction: 'asc' };
+      if (prev.direction === 'asc') return { key, direction: 'desc' };
       return null;
     });
   };
@@ -671,7 +706,15 @@ export default function WorksPage() {
                     const isOwner = Boolean(currentUserName) && (leadProject === currentUserName || assistantName === currentUserName);
 
                     const plans = plansByWork[work.id] || [];
-                    const standardTon = work.standard_ton != null ? Number(work.standard_ton) : 0;
+
+                    /* =========================================================
+                       ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 3 trường
+                       ========================================================= */
+                    const settingTon = getStandardTonForMonths(work, standardTonMap);
+                    const standardTon = settingTon > 0
+                      ? settingTon
+                      : (work.standard_ton != null ? Number(work.standard_ton) : 0);
+
                     const usedTons = work.dies_life_ton != null ? Number(work.dies_life_ton) : 0;
                     const remainingTons = standardTon - usedTons;
 
@@ -698,7 +741,34 @@ export default function WorksPage() {
                           <td style={cellCenter}>{work.ld_ratio ?? '—'}</td>
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
-                          <td style={cellCenter}>{fmtNum(standardTon)}</td>
+
+                          {/* ✅ Cột Tiêu chuẩn (tấn) — đọc từ Settings */}
+                          <td style={cellCenter}>
+                            {settingTon > 0 ? (
+                              <>
+                                {fmtNum(settingTon)}
+                                <span
+                                  title={`Lấy từ Cấu hình: ${work.dies_model} · ${work.press_length_mm} · ⌀${normHole(work.dies_hole_mm)}`}
+                                  style={{ marginLeft: 4, fontSize: '0.7em', color: '#22c55e' }}
+                                >
+                                  ●
+                                </span>
+                              </>
+                            ) : work.standard_ton != null && Number(work.standard_ton) > 0 ? (
+                              <span
+                                title="Settings chưa có bộ 3 này — đang dùng dữ liệu Die"
+                                style={{ color: '#f59e0b' }}
+                              >
+                                {fmtNum(Number(work.standard_ton))}
+                                <span style={{ marginLeft: 4, fontSize: '0.7em' }}>●</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted" title="Chưa cấu hình trong Settings">
+                                —
+                              </span>
+                            )}
+                          </td>
+
                           <td style={cellCenter}>{fmtNum(usedTons)}</td>
                           <td style={{ ...cellCenter, fontWeight: 600, color: remainingTons < 0 ? '#ef4444' : 'inherit' }}>
                             {fmtNum(remainingTons)}
@@ -792,7 +862,7 @@ export default function WorksPage() {
 
       <WorkDetailModal work={selectedWork} onClose={() => setSelectedWork(null)} />
 
-           {/* ✅ Modal QR Code */}
+      {/* ✅ Modal QR Code */}
       {qrWork && (
         <div
           onClick={() => setQrWork(null)}
