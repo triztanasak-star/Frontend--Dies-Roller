@@ -95,15 +95,23 @@ function ModelPressLengthSection({
   const queryClient = useQueryClient();
   const [newPressLength, setNewPressLength] = useState('');
   const [newStandardTon, setNewStandardTon] = useState('');
-  const [newDieHole, setNewDieHole] = useState(''); // ✅ Thêm state cho Die hole
+  const [newDieHole, setNewDieHole] = useState('');
   const [adding, setAdding] = useState(false);
 
   const usedSet = new Set(standards.map((s) => s.press_length_mm));
   const available = PRESS_LENGTH_OPTIONS.filter((pl) => !usedSet.has(pl));
 
+  // datalist id phải unique theo model
+  const datalistId = `press-length-options-${modelLabel.replace(/\s/g, '-')}`;
+
   const handleAdd = async () => {
     if (!newPressLength || !newStandardTon) {
       alert('Vui lòng chọn Press Length và nhập tiêu chuẩn');
+      return;
+    }
+    // Kiểm tra trùng lặp (cho cả trường hợp nhập tay)
+    if (usedSet.has(newPressLength.trim())) {
+      alert(`Press Length "${newPressLength}" đã tồn tại cho model này.`);
       return;
     }
     const stdTon = parseFormattedNumber(newStandardTon);
@@ -113,19 +121,19 @@ function ModelPressLengthSection({
     }
     setAdding(true);
     try {
-      const key = makeStdKey(modelLabel, newPressLength);
+      const key = makeStdKey(modelLabel, newPressLength.trim());
       await db.updateSetting(key, {
         value: String(stdTon),
         description: `${modelLabel} - Press Length ${newPressLength}`,
         dies_model: modelLabel,
-        press_length_mm: newPressLength,
+        press_length_mm: newPressLength.trim(),
         standard_ton: stdTon,
-        die_hole: newDieHole.trim(), // ✅ Lưu Die hole
+        die_hole: newDieHole.trim(),
       });
       await queryClient.invalidateQueries({ queryKey: ['settings', 'die'] });
       setNewPressLength('');
       setNewStandardTon('');
-      setNewDieHole(''); // ✅ Reset
+      setNewDieHole('');
     } catch (e) {
       alert('Lỗi thêm tiêu chuẩn');
       console.error(e);
@@ -140,17 +148,21 @@ function ModelPressLengthSection({
 
       {canEdit && (
         <div className="d-flex gap-2 mb-3 align-items-center" style={{ maxWidth: 800 }}>
-          <select
-            className="form-select"
+          {/* ✅ Input + datalist: vừa chọn vừa nhập tự do */}
+          <input
+            type="text"
+            className="form-control"
             style={{ width: 220 }}
+            list={datalistId}
+            placeholder="-- Chọn hoặc nhập Press Length --"
             value={newPressLength}
             onChange={(e) => setNewPressLength(e.target.value)}
-          >
-            <option value="">-- Chọn Press Length --</option>
+          />
+          <datalist id={datalistId}>
             {available.map((pl) => (
-              <option key={pl} value={pl}>{pl}</option>
+              <option key={pl} value={pl} />
             ))}
-          </select>
+          </datalist>
 
           <input
             type="text"
@@ -162,7 +174,6 @@ function ModelPressLengthSection({
             onChange={(e) => setNewStandardTon(formatInputValue(e.target.value))}
           />
 
-          {/* ✅ Ô nhập Die hole */}
           <input
             type="text"
             className="form-control"
@@ -210,7 +221,7 @@ function PressLengthCard({
   const [standardTonInput, setStandardTonInput] = useState(
     setting.standard_ton != null ? formatNumber(setting.standard_ton) : ''
   );
-  const [dieHoleInput, setDieHoleInput] = useState(setting.die_hole ?? ''); // ✅ State cho Die hole
+  const [dieHoleInput, setDieHoleInput] = useState(setting.die_hole ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -218,13 +229,13 @@ function PressLengthCard({
     setStandardTonInput(
       setting.standard_ton != null ? formatNumber(setting.standard_ton) : ''
     );
-    setDieHoleInput(setting.die_hole ?? ''); // ✅ Cập nhật khi setting thay đổi
+    setDieHoleInput(setting.die_hole ?? '');
   }, [setting.standard_ton, setting.die_hole]);
 
   const currentNum = setting.standard_ton ?? 0;
   const inputNum = parseFormattedNumber(standardTonInput) ?? 0;
   const dirty =
-    inputNum !== currentNum || dieHoleInput !== (setting.die_hole ?? ''); // ✅ Kiểm tra thay đổi cả Die hole
+    inputNum !== currentNum || dieHoleInput !== (setting.die_hole ?? '');
 
   const handleSave = async () => {
     if (!canEdit) return;
@@ -239,7 +250,7 @@ function PressLengthCard({
         dies_model: setting.dies_model,
         press_length_mm: setting.press_length_mm,
         standard_ton: inputNum,
-        die_hole: dieHoleInput.trim(), // ✅ Lưu Die hole
+        die_hole: dieHoleInput.trim(),
       });
       await queryClient.invalidateQueries({ queryKey: ['settings', 'die'] });
     } catch (e) {
@@ -266,16 +277,13 @@ function PressLengthCard({
   };
 
   return (
-    <div
-      className="card"
-      style={{
-        background: 'var(--card-bg, #1a1d2e)',
-        border: '1px solid rgba(148,163,184,0.25)',
-      }}
-    >
+    // ✅ Dùng class Bootstrap để tự động theo theme sáng/tối
+    <div className="card bg-body text-body border">
       <div className="card-body">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="card-title mb-0">Press Length: {setting.press_length_mm}</h6>
+          <h6 className="card-title mb-0 text-body">
+            Press Length: {setting.press_length_mm}
+          </h6>
           {canEdit && (
             <button
               type="button"
@@ -290,7 +298,7 @@ function PressLengthCard({
         </div>
 
         <div className="mb-3">
-          <label className="form-label small">Tiêu chuẩn (tấn)</label>
+          <label className="form-label small text-body">Tiêu chuẩn (tấn)</label>
           <input
             type="text"
             inputMode="numeric"
@@ -302,9 +310,8 @@ function PressLengthCard({
           />
         </div>
 
-        {/* ✅ Ô nhập Die hole trong card */}
         <div className="mb-3">
-          <label className="form-label small">Die hole</label>
+          <label className="form-label small text-body">Die hole</label>
           <input
             type="text"
             className="form-control"
