@@ -411,7 +411,8 @@ export default function RollerWorksPage() {
     fetchAttachments();
     return () => { cancelled = true; };
   }, [works]);
-    const filtered = useMemo(() => {
+
+  const filtered = useMemo(() => {
     const norm = (v: any) => String(v ?? '').toLowerCase().trim();
     const list = works.filter((w) => {
       if (fModel.length > 0) {
@@ -463,9 +464,13 @@ export default function RollerWorksPage() {
     return list;
   }, [works, fModel, fHole, fShellType, fLine, fStatus, fYear, sortConfig]);
 
+  /* =========================================================
+     ✅ summary — DỰ KIẾN SỐ THÁNG = totalRemaining / 1 số tiêu chuẩn
+     Lấy DUY NHẤT 1 số từ widget "Tiêu chuẩn đang lọc" (filterComboStandardTon.ton)
+     KHÔNG cộng dồn theo số dòng.
+     ========================================================= */
   const summary = useMemo(() => {
     let totalRemaining = 0;
-    let totalStandardTon = 0;
 
     filtered.forEach((w) => {
       const settingTon = getStandardTonForMonths(w, standardTonMap);
@@ -475,23 +480,23 @@ export default function RollerWorksPage() {
           : (w.standard_ton != null ? Number(w.standard_ton) : 0);
 
       const usedTon = w.dies_life_ton != null ? Number(w.dies_life_ton) : 0;
-      const remaining = standardTon - usedTon;
-      totalRemaining += remaining;
-
-      totalStandardTon += settingTon;
+      totalRemaining += standardTon - usedTon;
     });
 
-    const totalMonths = totalStandardTon > 0 ? totalRemaining / totalStandardTon : 0;
+    // ✅ Chỉ lấy ĐÚNG 1 số tiêu chuẩn từ combo filter
+    const standardTonForMonths = filterComboStandardTon.ton ?? 0;
+
+    const totalMonths =
+      standardTonForMonths > 0 ? totalRemaining / standardTonForMonths : 0;
 
     return {
       count: filtered.length,
       totalRemaining,
-      totalStandardTon,
+      standardTonForMonths,
       totalMonths,
     };
-  }, [filtered, standardTonMap]);
-
-  const handleFormSubmit = async (values: WorkFormValues, editingId: number | null, isAssignMode: boolean) => {
+  }, [filtered, standardTonMap, filterComboStandardTon]);
+    const handleFormSubmit = async (values: WorkFormValues, editingId: number | null, isAssignMode: boolean) => {
     const payload: Partial<DigitalWork> = {
       task_name: values.task_name || values.dies_model || `Roller ${values.dies_code || 'Mới'}`,
       factory_name: values.factory_name || null,
@@ -739,8 +744,9 @@ export default function RollerWorksPage() {
                   <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
                     DỰ KIẾN SỐ THÁNG
                   </div>
+                  {/* ✅ Đổi điều kiện sang standardTonForMonths */}
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
-                    {summary.totalStandardTon > 0 ? (
+                    {summary.standardTonForMonths > 0 ? (
                       <>
                         {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
                       </>
@@ -798,8 +804,7 @@ export default function RollerWorksPage() {
 
                     /* ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 2 trường */
                     const settingTon = getStandardTonForMonths(work, standardTonMap);
-                    const standardTon = settingTon > 0
-                      ? settingTon
+                    const standardTon = settingTon > 0                      ? settingTon
                       : (work.standard_ton != null ? Number(work.standard_ton) : 0);
 
                     const usedTons = work.dies_life_ton != null ? Number(work.dies_life_ton) : 0;
