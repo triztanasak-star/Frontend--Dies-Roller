@@ -34,10 +34,16 @@ const formatInputValue = (str: string): string => {
   return new Intl.NumberFormat('vi-VN').format(Number(cleaned));
 };
 
-const makeStdKey = (modelLabel: string, pressLength: string) => {
+// ✅ Key định danh theo 3 trường: model + press_length + die_hole
+const makeStdKey = (
+  modelLabel: string,
+  pressLength: string,
+  dieHole: string
+) => {
   const modelSlug = modelLabel.replace(/[\s-]/g, '_');
   const plSlug = pressLength.replace(/-/g, '_');
-  return `std_die_${modelSlug}_${plSlug}`;
+  const dhSlug = (dieHole.trim() || 'none').replace(/[\s\-./]/g, '_');
+  return `std_die_${modelSlug}_${plSlug}_${dhSlug}`;
 };
 
 export default function SettingsPage() {
@@ -98,37 +104,48 @@ function ModelPressLengthSection({
   const [newDieHole, setNewDieHole] = useState('');
   const [adding, setAdding] = useState(false);
 
-  const usedSet = new Set(standards.map((s) => s.press_length_mm));
-  const available = PRESS_LENGTH_OPTIONS.filter((pl) => !usedSet.has(pl));
+  // ✅ Set tổ hợp (press_length | die_hole) đã tồn tại — dùng để check trùng cả 3 trường
+  const usedComboSet = new Set(
+    standards.map(
+      (s) => `${(s.press_length_mm ?? '').trim()}|${(s.die_hole ?? '').trim()}`
+    )
+  );
 
-  // datalist id phải unique theo model
   const datalistId = `press-length-options-${modelLabel.replace(/\s/g, '-')}`;
 
   const handleAdd = async () => {
-    if (!newPressLength || !newStandardTon) {
+    const pl = newPressLength.trim();
+    const dh = newDieHole.trim();
+
+    if (!pl || !newStandardTon) {
       alert('Vui lòng chọn Press Length và nhập tiêu chuẩn');
       return;
     }
-    // Kiểm tra trùng lặp (cho cả trường hợp nhập tay)
-    if (usedSet.has(newPressLength.trim())) {
-      alert(`Press Length "${newPressLength}" đã tồn tại cho model này.`);
+
+    // ✅ Chỉ chặn khi trùng CẢ 3 trường: model (đã cố định) + press_length + die_hole
+    if (usedComboSet.has(`${pl}|${dh}`)) {
+      alert(
+        `Đã tồn tại bản ghi cho Press Length "${pl}" với Die hole "${dh || '(trống)'}".`
+      );
       return;
     }
+
     const stdTon = parseFormattedNumber(newStandardTon);
     if (stdTon === null || stdTon < 0) {
       alert('Số tấn không hợp lệ');
       return;
     }
+
     setAdding(true);
     try {
-      const key = makeStdKey(modelLabel, newPressLength.trim());
+      const key = makeStdKey(modelLabel, pl, dh);
       await db.updateSetting(key, {
         value: String(stdTon),
-        description: `${modelLabel} - Press Length ${newPressLength}`,
+        description: `${modelLabel} - Press Length ${pl} - Die hole ${dh || 'N/A'}`,
         dies_model: modelLabel,
-        press_length_mm: newPressLength.trim(),
+        press_length_mm: pl,
         standard_ton: stdTon,
-        die_hole: newDieHole.trim(),
+        die_hole: dh,
       });
       await queryClient.invalidateQueries({ queryKey: ['settings', 'die'] });
       setNewPressLength('');
@@ -159,7 +176,7 @@ function ModelPressLengthSection({
             onChange={(e) => setNewPressLength(e.target.value)}
           />
           <datalist id={datalistId}>
-            {available.map((pl) => (
+            {PRESS_LENGTH_OPTIONS.map((pl) => (
               <option key={pl} value={pl} />
             ))}
           </datalist>
@@ -263,7 +280,14 @@ function PressLengthCard({
 
   const handleDelete = async () => {
     if (!canEdit) return;
-    if (!confirm(`Xóa tiêu chuẩn cho Press Length ${setting.press_length_mm}?`)) return;
+    if (
+      !confirm(
+        `Xóa tiêu chuẩn cho Press Length ${setting.press_length_mm}${
+          setting.die_hole ? ` - Die hole ${setting.die_hole}` : ''
+        }?`
+      )
+    )
+      return;
     setDeleting(true);
     try {
       await db.deleteSetting(setting.key);
@@ -283,6 +307,7 @@ function PressLengthCard({
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="card-title mb-0 text-body">
             Press Length: {setting.press_length_mm}
+            {setting.die_hole ? ` • Die ${setting.die_hole}` : ''}
           </h6>
           {canEdit && (
             <button
