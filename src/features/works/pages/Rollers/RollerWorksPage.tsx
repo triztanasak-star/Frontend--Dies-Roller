@@ -112,7 +112,7 @@ function makeStdKey2(model: any, shellType: any): string {
 
 /**
  * ✅ Tra "Tiêu chuẩn (tấn)" từ Settings theo key 2 trường (Model + Shell Type).
- * Thiếu 1 trong 2 → trả 0.
+ * Chỉ dùng cho widget filter combo + tính DỰ KIẾN SỐ THÁNG.
  */
 function getStandardTonForMonths(work: DigitalWork, standardTonMap: Record<string, number>): number {
   const model = normModel(work.dies_model);
@@ -329,21 +329,8 @@ export default function RollerWorksPage() {
     return m;
   }, [settingsQuery.data]);
 
-  // Debug — xoá sau khi xác nhận chạy đúng
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('=== Roller standardTonMap ===');
-      console.table(standardTonMap);
-      works.slice(0, 5).forEach((w) => {
-        const k = makeStdKey2(w.dies_model, w.press_length_mm);
-        console.log(k, '→', standardTonMap[k] ?? 'NOT FOUND');
-      });
-    }
-  }, [standardTonMap, works]);
-
   /* =========================================================
      ✅ filterComboStandardTon — LUÔN trả về object (không null)
-     Roller chỉ khoá theo 2 trường: Model + Shell Type
      ========================================================= */
   const filterComboStandardTon = useMemo(() => {
     const modelSel = fModel.length === 1 ? fModel[0] : null;
@@ -465,27 +452,22 @@ export default function RollerWorksPage() {
   }, [works, fModel, fHole, fShellType, fLine, fStatus, fYear, sortConfig]);
 
   /* =========================================================
-     ✅ summary — DỰ KIẾN SỐ THÁNG = totalRemaining / 1 số tiêu chuẩn
-     Lấy DUY NHẤT 1 số từ widget "Tiêu chuẩn đang lọc" (filterComboStandardTon.ton)
-     KHÔNG cộng dồn theo số dòng.
+     ✅ summary — 
+     - TỔNG SỐ TẤN CÒN LẠI: dùng work.standard_ton (không Settings)
+     - DỰ KIẾN SỐ THÁNG: totalRemaining / 1 số tiêu chuẩn từ filter combo
      ========================================================= */
   const summary = useMemo(() => {
     let totalRemaining = 0;
 
     filtered.forEach((w) => {
-      const settingTon = getStandardTonForMonths(w, standardTonMap);
-      const standardTon =
-        settingTon > 0
-          ? settingTon
-          : (w.standard_ton != null ? Number(w.standard_ton) : 0);
-
+      // ✅ Cột Tiêu chuẩn chỉ đọc từ work.standard_ton
+      const standardTon = w.standard_ton != null ? Number(w.standard_ton) : 0;
       const usedTon = w.dies_life_ton != null ? Number(w.dies_life_ton) : 0;
       totalRemaining += standardTon - usedTon;
     });
 
-    // ✅ Chỉ lấy ĐÚNG 1 số tiêu chuẩn từ combo filter
+    // ✅ DỰ KIẾN SỐ THÁNG — chia cho 1 số duy nhất từ filter combo Settings
     const standardTonForMonths = filterComboStandardTon.ton ?? 0;
-
     const totalMonths =
       standardTonForMonths > 0 ? totalRemaining / standardTonForMonths : 0;
 
@@ -495,7 +477,7 @@ export default function RollerWorksPage() {
       standardTonForMonths,
       totalMonths,
     };
-  }, [filtered, standardTonMap, filterComboStandardTon]);
+  }, [filtered, filterComboStandardTon]);
     const handleFormSubmit = async (values: WorkFormValues, editingId: number | null, isAssignMode: boolean) => {
     const payload: Partial<DigitalWork> = {
       task_name: values.task_name || values.dies_model || `Roller ${values.dies_code || 'Mới'}`,
@@ -601,7 +583,6 @@ export default function RollerWorksPage() {
 
       {!isLoading && !isError && (
         <div className="data-table-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          {/* ✅ Toolbar: nowrap để không bị wrap xuống 2 hàng */}
           <div
             className="data-table-toolbar"
             style={{
@@ -646,7 +627,6 @@ export default function RollerWorksPage() {
               </button>
             )}
 
-            {/* ✅ Cụm bên phải: Widget Tiêu chuẩn + Tổng hợp — luôn 1 hàng */}
             <div
               style={{
                 marginLeft: 'auto',
@@ -657,7 +637,7 @@ export default function RollerWorksPage() {
                 flexShrink: 0,
               }}
             >
-              {/* Widget: Tiêu chuẩn tấn đọc từ Settings (Model + Shell Type) */}
+              {/* Widget: Tiêu chuẩn tấn đọc từ Settings */}
               <div
                 style={{
                   display: 'flex',
@@ -744,7 +724,6 @@ export default function RollerWorksPage() {
                   <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
                     DỰ KIẾN SỐ THÁNG
                   </div>
-                  {/* ✅ Đổi điều kiện sang standardTonForMonths */}
                   <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
                     {summary.standardTonForMonths > 0 ? (
                       <>
@@ -802,11 +781,8 @@ export default function RollerWorksPage() {
 
                     const plans = plansByWork[work.id] || [];
 
-                    /* ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 2 trường */
-                    const settingTon = getStandardTonForMonths(work, standardTonMap);
-                    const standardTon = settingTon > 0                      ? settingTon
-                      : (work.standard_ton != null ? Number(work.standard_ton) : 0);
-
+                    /* ✅ Cột Tiêu chuẩn — CHỈ lấy từ work.standard_ton (digital_roller_works) */
+                    const standardTon = work.standard_ton != null ? Number(work.standard_ton) : 0;
                     const usedTons = work.dies_life_ton != null ? Number(work.dies_life_ton) : 0;
                     const remainingTons = standardTon - usedTons;
 
@@ -833,29 +809,12 @@ export default function RollerWorksPage() {
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
 
+                          {/* ✅ Tiêu chuẩn (tấn) — CHỈ lấy từ work.standard_ton */}
                           <td style={cellCenter}>
-                            {settingTon > 0 ? (
-                              <>
-                                {fmtNum(settingTon)}
-                                <span
-                                  title={`Lấy từ Cấu hình: ${work.dies_model} · ${work.press_length_mm}`}
-                                  style={{ marginLeft: 4, fontSize: '0.7em', color: '#22c55e' }}
-                                >
-                                  ●
-                                </span>
-                              </>
-                            ) : work.standard_ton != null && Number(work.standard_ton) > 0 ? (
-                              <span
-                                title="Settings chưa có bộ 2 này — đang dùng dữ liệu Roller"
-                                style={{ color: '#f59e0b' }}
-                              >
-                                {fmtNum(Number(work.standard_ton))}
-                                <span style={{ marginLeft: 4, fontSize: '0.7em' }}>●</span>
-                              </span>
+                            {work.standard_ton != null && Number(work.standard_ton) > 0 ? (
+                              fmtNum(Number(work.standard_ton))
                             ) : (
-                              <span className="text-muted" title="Chưa cấu hình trong Settings">
-                                —
-                              </span>
+                              <span className="text-muted">—</span>
                             )}
                           </td>
 
