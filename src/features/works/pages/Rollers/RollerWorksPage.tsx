@@ -94,16 +94,31 @@ function sortString(a: string, b: string): number {
   return String(a ?? '').localeCompare(String(b ?? ''));
 }
 
+/* =========================================================
+   ✅ Chuẩn hoá 2 trường Roller để so khớp Settings <-> Works
+   ========================================================= */
+
+function normModel(v: any): string {
+  return String(v ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
+}
+
+function normShellType(v: any): string {
+  return String(v ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function makeStdKey2(model: any, shellType: any): string {
+  return `${normModel(model)}|${normShellType(shellType)}`;
+}
+
+/**
+ * ✅ Tra "Tiêu chuẩn (tấn)" từ Settings theo key 2 trường (Model + Shell Type).
+ * Thiếu 1 trong 2 → trả 0.
+ */
 function getStandardTonForMonths(work: DigitalWork, standardTonMap: Record<string, number>): number {
-  const model = String(work.dies_model ?? '').trim();
-  const shellType = String(work.press_length_mm ?? '').trim();
-  if (model && shellType) {
-    const key = `${model}|${shellType}`;
-    if (standardTonMap[key] != null) {
-      return standardTonMap[key];
-    }
-  }
-  return 0;
+  const model = normModel(work.dies_model);
+  const shellType = normShellType(work.press_length_mm);
+  if (!model || !shellType) return 0;
+  return standardTonMap[`${model}|${shellType}`] ?? 0;
 }
 
 const cellCenter: React.CSSProperties = {
@@ -181,7 +196,7 @@ function MultiSelectFilter({
             maxHeight: 260,
             overflowY: 'auto',
             background: 'var(--card-bg, #1a1d2e)',
-            color: 'var(--text-color, #ffffff)',   // ✅ THÊM DÒNG NÀY
+            color: 'var(--text-color, #ffffff)',
             border: '1px solid rgba(148, 163, 184, 0.25)',
             borderRadius: 6,
             padding: 8,
@@ -225,6 +240,7 @@ function MultiSelectFilter({
     </div>
   );
 }
+
 export default function RollerWorksPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -296,18 +312,62 @@ export default function RollerWorksPage() {
     queryFn: () => db.listSettings(),
   });
 
+  /* =========================================================
+     ✅ standardTonMap — key 2 trường: "MODEL|SHELL_TYPE"
+     ========================================================= */
   const standardTonMap = useMemo(() => {
     const m: Record<string, number> = {};
     (settingsQuery.data?.documents ?? [])
       .filter((s) => s.key?.startsWith('std_roller_'))
       .forEach((s) => {
-        if (s.dies_model && s.press_length_mm && s.standard_ton != null) {
-          const key = `${s.dies_model.trim()}|${s.press_length_mm.trim()}`;
-          m[key] = Number(s.standard_ton);
-        }
+        const model = normModel(s.dies_model);
+        const shell = normShellType(s.press_length_mm);
+        if (!model || !shell) return;
+        if (s.standard_ton == null) return;
+        m[`${model}|${shell}`] = Number(s.standard_ton);
       });
     return m;
   }, [settingsQuery.data]);
+
+  // Debug — xoá sau khi xác nhận chạy đúng
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('=== Roller standardTonMap ===');
+      console.table(standardTonMap);
+      works.slice(0, 5).forEach((w) => {
+        const k = makeStdKey2(w.dies_model, w.press_length_mm);
+        console.log(k, '→', standardTonMap[k] ?? 'NOT FOUND');
+      });
+    }
+  }, [standardTonMap, works]);
+
+  /* =========================================================
+     ✅ filterComboStandardTon — LUÔN trả về object (không null)
+     Roller chỉ khoá theo 2 trường: Model + Shell Type
+     ========================================================= */
+  const filterComboStandardTon = useMemo(() => {
+    const modelSel = fModel.length === 1 ? fModel[0] : null;
+    const shellSel = fShellType.length === 1 ? fShellType[0] : null;
+
+    const isComplete = Boolean(modelSel && shellSel);
+
+    let key = '';
+    let ton: number | null = null;
+
+    if (isComplete) {
+      key = makeStdKey2(modelSel, shellSel);
+      const found = standardTonMap[key];
+      ton = found != null ? found : null;
+    }
+
+    return {
+      isComplete,
+      model: modelSel,
+      shellType: shellSel,
+      ton,
+      key,
+    };
+  }, [fModel, fShellType, standardTonMap]);
 
   useEffect(() => {
     if (works.length === 0) return;
@@ -351,8 +411,7 @@ export default function RollerWorksPage() {
     fetchAttachments();
     return () => { cancelled = true; };
   }, [works]);
-
-  const filtered = useMemo(() => {
+    const filtered = useMemo(() => {
     const norm = (v: any) => String(v ?? '').toLowerCase().trim();
     const list = works.filter((w) => {
       if (fModel.length > 0) {
@@ -406,30 +465,31 @@ export default function RollerWorksPage() {
 
   const summary = useMemo(() => {
     let totalRemaining = 0;
+    let totalStandardTon = 0;
 
     filtered.forEach((w) => {
-      const standardTon = w.standard_ton != null ? Number(w.standard_ton) : 0;
+      const settingTon = getStandardTonForMonths(w, standardTonMap);
+      const standardTon =
+        settingTon > 0
+          ? settingTon
+          : (w.standard_ton != null ? Number(w.standard_ton) : 0);
+
       const usedTon = w.dies_life_ton != null ? Number(w.dies_life_ton) : 0;
       const remaining = standardTon - usedTon;
       totalRemaining += remaining;
+
+      totalStandardTon += settingTon;
     });
 
-    let standardTonForMonths = 0;
-    if (filtered.length > 0) {
-      standardTonForMonths = getStandardTonForMonths(filtered[0], standardTonMap);
-    }
-
-    const totalMonths = standardTonForMonths > 0
-      ? totalRemaining / standardTonForMonths
-      : 0;
+    const totalMonths = totalStandardTon > 0 ? totalRemaining / totalStandardTon : 0;
 
     return {
       count: filtered.length,
       totalRemaining,
-      standardTonForMonths,
+      totalStandardTon,
       totalMonths,
     };
-  }, [filtered, plansByWork, standardTonMap]);
+  }, [filtered, standardTonMap]);
 
   const handleFormSubmit = async (values: WorkFormValues, editingId: number | null, isAssignMode: boolean) => {
     const payload: Partial<DigitalWork> = {
@@ -536,6 +596,7 @@ export default function RollerWorksPage() {
 
       {!isLoading && !isError && (
         <div className="data-table-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          {/* ✅ Toolbar: nowrap để không bị wrap xuống 2 hàng */}
           <div
             className="data-table-toolbar"
             style={{
@@ -543,7 +604,7 @@ export default function RollerWorksPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              flexWrap: 'wrap',
+              flexWrap: 'nowrap',
               padding: '12px 16px',
               zIndex: 20,
             }}
@@ -580,35 +641,113 @@ export default function RollerWorksPage() {
               </button>
             )}
 
+            {/* ✅ Cụm bên phải: Widget Tiêu chuẩn + Tổng hợp — luôn 1 hàng */}
             <div
               style={{
                 marginLeft: 'auto',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 16,
-                padding: '6px 14px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.35)',
-                borderRadius: 8,
+                gap: 12,
+                flexWrap: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
-                  TỔNG SỐ TẤN CÒN LẠI
+              {/* Widget: Tiêu chuẩn tấn đọc từ Settings (Model + Shell Type) */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '6px 12px',
+                  background: !filterComboStandardTon.isComplete
+                    ? 'rgba(148, 163, 184, 0.1)'
+                    : filterComboStandardTon.ton != null
+                    ? 'rgba(34, 197, 94, 0.12)'
+                    : 'rgba(239, 68, 68, 0.12)',
+                  border: `1px solid ${
+                    !filterComboStandardTon.isComplete
+                      ? 'rgba(148, 163, 184, 0.35)'
+                      : filterComboStandardTon.ton != null
+                      ? 'rgba(34, 197, 94, 0.5)'
+                      : 'rgba(239, 68, 68, 0.5)'
+                  }`,
+                  borderRadius: 8,
+                  fontSize: '0.8rem',
+                  whiteSpace: 'nowrap',
+                  minWidth: 240,
+                }}
+                title={
+                  filterComboStandardTon.isComplete
+                    ? `Settings key: ${filterComboStandardTon.key}`
+                    : 'Chọn đúng 1 Roller Model + 1 Roller Shell Type để xem Tiêu chuẩn'
+                }
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, flex: 1 }}>
+                  <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
+                    TIÊU CHUẨN ĐANG LỌC
+                  </span>
+                  <span style={{ color: '#cbd5e1', fontSize: '0.7rem' }}>
+                    {filterComboStandardTon.isComplete
+                      ? `${filterComboStandardTon.model} · ${filterComboStandardTon.shellType}`
+                      : '— chưa chọn đủ bộ lọc —'}
+                  </span>
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
-                  {fmtNum(summary.totalRemaining)} <small style={{ fontSize: '0.75rem' }}>tấn</small>
+
+                <div style={{ width: 1, height: 28, background: 'rgba(148,163,184,0.3)' }} />
+
+                <div style={{ textAlign: 'center', minWidth: 70 }}>
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>TẤN</div>
+                  {!filterComboStandardTon.isComplete ? (
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' }}>—</div>
+                  ) : filterComboStandardTon.ton != null ? (
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
+                      {fmtNum(filterComboStandardTon.ton)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>
+                      Chưa cấu hình
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div style={{ width: 1, height: 32, background: 'rgba(148, 163, 184, 0.3)' }} />
-
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
-                  DỰ KIẾN SỐ THÁNG
+              {/* Cụm tổng hợp */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '6px 14px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  borderRadius: 8,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
+                    TỔNG SỐ TẤN CÒN LẠI
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
+                    {fmtNum(summary.totalRemaining)} <small style={{ fontSize: '0.75rem' }}>tấn</small>
+                  </div>
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
-                  {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
+
+                <div style={{ width: 1, height: 32, background: 'rgba(148, 163, 184, 0.3)' }} />
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
+                    DỰ KIẾN SỐ THÁNG
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
+                    {summary.totalStandardTon > 0 ? (
+                      <>
+                        {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
+                      </>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.85rem' }}>Chưa setting</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -636,7 +775,6 @@ export default function RollerWorksPage() {
                         </span>
                       )}
                     </th>
-                    {/* ✅ CỘT MỚI: ROLLER CODE */}
                     <th style={thStyle('110px')}>Roller Code</th>
                     <th style={thStyle('120px')}>Roller Price (VND)</th>
                     <th style={thStyle('95px')}>Tiêu chuẩn (tấn)</th>
@@ -657,7 +795,13 @@ export default function RollerWorksPage() {
                     const isOwner = Boolean(currentUserName) && (leadProject === currentUserName || assistantName === currentUserName);
 
                     const plans = plansByWork[work.id] || [];
-                    const standardTon = work.standard_ton != null ? Number(work.standard_ton) : 0;
+
+                    /* ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 2 trường */
+                    const settingTon = getStandardTonForMonths(work, standardTonMap);
+                    const standardTon = settingTon > 0
+                      ? settingTon
+                      : (work.standard_ton != null ? Number(work.standard_ton) : 0);
+
                     const usedTons = work.dies_life_ton != null ? Number(work.dies_life_ton) : 0;
                     const remainingTons = standardTon - usedTons;
 
@@ -681,10 +825,35 @@ export default function RollerWorksPage() {
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_model || '—'}</td>
                           <td style={cellCenter}>{work.dies_hole_mm ?? '—'}</td>
                           <td style={cellCenter}>{work.press_length_mm || '—'}</td>
-                          {/* ✅ ROLLER CODE */}
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
-                          <td style={cellCenter}>{fmtNum(standardTon)}</td>
+
+                          <td style={cellCenter}>
+                            {settingTon > 0 ? (
+                              <>
+                                {fmtNum(settingTon)}
+                                <span
+                                  title={`Lấy từ Cấu hình: ${work.dies_model} · ${work.press_length_mm}`}
+                                  style={{ marginLeft: 4, fontSize: '0.7em', color: '#22c55e' }}
+                                >
+                                  ●
+                                </span>
+                              </>
+                            ) : work.standard_ton != null && Number(work.standard_ton) > 0 ? (
+                              <span
+                                title="Settings chưa có bộ 2 này — đang dùng dữ liệu Roller"
+                                style={{ color: '#f59e0b' }}
+                              >
+                                {fmtNum(Number(work.standard_ton))}
+                                <span style={{ marginLeft: 4, fontSize: '0.7em' }}>●</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted" title="Chưa cấu hình trong Settings">
+                                —
+                              </span>
+                            )}
+                          </td>
+
                           <td style={cellCenter}>{fmtNum(usedTons)}</td>
                           <td style={{ ...cellCenter, fontWeight: 600, color: remainingTons < 0 ? '#ef4444' : 'inherit' }}>
                             {fmtNum(remainingTons)}

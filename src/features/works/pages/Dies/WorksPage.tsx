@@ -112,10 +112,6 @@ function makeStdKey3(model: any, press: any, hole: any): string {
   return `${normModel(model)}|${normPress(press)}|${normHole(hole)}`;
 }
 
-/**
- * ✅ Tra "Tiêu chuẩn (tấn)" từ Settings theo key 3 trường.
- * Thiếu 1 trong 3 → trả 0.
- */
 function getStandardTonForMonths(
   work: DigitalWork,
   standardTonMap: Record<string, number>
@@ -318,9 +314,6 @@ export default function WorksPage() {
     queryFn: () => db.listSettings(),
   });
 
-  /* =========================================================
-     ✅ standardTonMap — key 3 trường: "MODEL|PRESS|HOLE"
-     ========================================================= */
   const standardTonMap = useMemo(() => {
     const m: Record<string, number> = {};
     (settingsQuery.data?.documents ?? []).forEach((s) => {
@@ -349,24 +342,31 @@ export default function WorksPage() {
   }, [standardTonMap, works]);
 
   /* =========================================================
-     ✅ filterComboStandardTon — Tiêu chuẩn tấn của combo đang lọc
-     Hiển thị trên widget toolbar ngay khu vực vẽ đỏ
+     ✅ filterComboStandardTon — LUÔN trả về object (không null)
+     để widget toolbar luôn hiển thị
      ========================================================= */
   const filterComboStandardTon = useMemo(() => {
     const modelSel = fModel.length === 1 ? fModel[0] : null;
     const holeSel  = fHole.length === 1 ? fHole[0] : null;
     const pressSel = fPressLength.length === 1 ? fPressLength[0] : null;
 
-    if (!modelSel || !holeSel || !pressSel) return null;
+    const isComplete = Boolean(modelSel && holeSel && pressSel);
 
-    const key = makeStdKey3(modelSel, pressSel, holeSel);
-    const ton = standardTonMap[key];
+    let key = '';
+    let ton: number | null = null;
+
+    if (isComplete) {
+      key = makeStdKey3(modelSel, pressSel, holeSel);
+      const found = standardTonMap[key];
+      ton = found != null ? found : null;
+    }
 
     return {
+      isComplete,
       model: modelSel,
       hole: holeSel,
       press: pressSel,
-      ton: ton ?? null,
+      ton,
       key,
     };
   }, [fModel, fHole, fPressLength, standardTonMap]);
@@ -600,6 +600,7 @@ export default function WorksPage() {
 
       {!isLoading && !isError && (
         <div className="data-table-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          {/* ✅ Toolbar: nowrap để không bị wrap xuống 2 hàng */}
           <div
             className="data-table-toolbar"
             style={{
@@ -607,7 +608,7 @@ export default function WorksPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              flexWrap: 'wrap',
+              flexWrap: 'nowrap',
               padding: '12px 16px',
               zIndex: 20,
             }}
@@ -636,90 +637,113 @@ export default function WorksPage() {
               </button>
             )}
 
-            {/* ✅ Widget: Tiêu chuẩn tấn đọc từ Settings — hiển thị ngay khu toolbar */}
-            {filterComboStandardTon && (
+            {/* ✅ Cụm bên phải: Widget + Tổng hợp — luôn 1 hàng */}
+            <div
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                flexWrap: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              {/* Widget: Tiêu chuẩn tấn đọc từ Settings */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
                   padding: '6px 12px',
-                  background:
-                    filterComboStandardTon.ton != null
-                      ? 'rgba(34, 197, 94, 0.12)'
-                      : 'rgba(239, 68, 68, 0.12)',
+                  background: !filterComboStandardTon.isComplete
+                    ? 'rgba(148, 163, 184, 0.1)'
+                    : filterComboStandardTon.ton != null
+                    ? 'rgba(34, 197, 94, 0.12)'
+                    : 'rgba(239, 68, 68, 0.12)',
                   border: `1px solid ${
-                    filterComboStandardTon.ton != null
+                    !filterComboStandardTon.isComplete
+                      ? 'rgba(148, 163, 184, 0.35)'
+                      : filterComboStandardTon.ton != null
                       ? 'rgba(34, 197, 94, 0.5)'
                       : 'rgba(239, 68, 68, 0.5)'
                   }`,
                   borderRadius: 8,
                   fontSize: '0.8rem',
                   whiteSpace: 'nowrap',
+                  minWidth: 240,
                 }}
-                title={`Settings key: ${filterComboStandardTon.key}`}
+                title={
+                  filterComboStandardTon.isComplete
+                    ? `Settings key: ${filterComboStandardTon.key}`
+                    : 'Chọn đúng 1 Dies Model + 1 Hole + 1 Press Length để xem Tiêu chuẩn'
+                }
               >
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, flex: 1 }}>
                   <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>
                     TIÊU CHUẨN ĐANG LỌC
                   </span>
                   <span style={{ color: '#cbd5e1', fontSize: '0.7rem' }}>
-                    {filterComboStandardTon.model} · ⌀{filterComboStandardTon.hole} · {filterComboStandardTon.press}
+                    {filterComboStandardTon.isComplete
+                      ? `${filterComboStandardTon.model} · ⌀${filterComboStandardTon.hole} · ${filterComboStandardTon.press}`
+                      : '— chưa chọn đủ bộ lọc —'}
                   </span>
                 </div>
 
                 <div style={{ width: 1, height: 28, background: 'rgba(148,163,184,0.3)' }} />
 
-                <div style={{ textAlign: 'center' }}>
+                <div style={{ textAlign: 'center', minWidth: 70 }}>
                   <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600 }}>TẤN</div>
-                  {filterComboStandardTon.ton != null ? (
+                  {!filterComboStandardTon.isComplete ? (
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8' }}>—</div>
+                  ) : filterComboStandardTon.ton != null ? (
                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
                       {fmtNum(filterComboStandardTon.ton)}
                     </div>
                   ) : (
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ef4444' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>
                       Chưa cấu hình
                     </div>
                   )}
                 </div>
               </div>
-            )}
 
-            <div
-              style={{
-                marginLeft: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 16,
-                padding: '6px 14px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.35)',
-                borderRadius: 8,
-              }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
-                  TỔNG SỐ TẤN CÒN LẠI
+              {/* Cụm tổng hợp */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '6px 14px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.35)',
+                  borderRadius: 8,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
+                    TỔNG SỐ TẤN CÒN LẠI
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
+                    {fmtNum(summary.totalRemaining)} <small style={{ fontSize: '0.75rem' }}>tấn</small>
+                  </div>
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#22c55e' }}>
-                  {fmtNum(summary.totalRemaining)} <small style={{ fontSize: '0.75rem' }}>tấn</small>
-                </div>
-              </div>
 
-              <div style={{ width: 1, height: 32, background: 'rgba(148, 163, 184, 0.3)' }} />
+                <div style={{ width: 1, height: 32, background: 'rgba(148, 163, 184, 0.3)' }} />
 
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
-                  DỰ KIẾN SỐ THÁNG
-                </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
-                  {summary.totalStandardTon > 0 ? (
-                    <>
-                      {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
-                    </>
-                  ) : (
-                    <span className="text-muted" style={{ fontSize: '0.85rem' }}>Chưa setting</span>
-                  )}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>
+                    DỰ KIẾN SỐ THÁNG
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f59e0b' }}>
+                    {summary.totalStandardTon > 0 ? (
+                      <>
+                        {summary.totalMonths.toFixed(1)} <small style={{ fontSize: '0.75rem' }}>tháng</small>
+                      </>
+                    ) : (
+                      <span className="text-muted" style={{ fontSize: '0.85rem' }}>Chưa setting</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -769,7 +793,6 @@ export default function WorksPage() {
 
                     const plans = plansByWork[work.id] || [];
 
-                    /* ✅ Lấy "Tiêu chuẩn (tấn)" từ Settings theo key 3 trường */
                     const settingTon = getStandardTonForMonths(work, standardTonMap);
                     const standardTon = settingTon > 0
                       ? settingTon
@@ -802,7 +825,6 @@ export default function WorksPage() {
                           <td style={{ ...cellCenter, wordBreak: 'break-word' }}>{work.dies_code || '—'}</td>
                           <td style={cellCenter}>{fmtNum(work.dies_price_vnd)}</td>
 
-                          {/* ✅ Cột Tiêu chuẩn (tấn) — đọc từ Settings */}
                           <td style={cellCenter}>
                             {settingTon > 0 ? (
                               <>
