@@ -19,7 +19,8 @@ export interface ProgressFormValues {
   dies_model: string;
   dies_code: string;
   supplier: string;
-  dies_hole_mm: number | null;
+  // ✅ SỬA: dies_hole_mm là string (DB là VARCHAR(50)) — vì lưu "8x10", "No Hole"...
+  dies_hole_mm: string | null;
   press_length_mm: string | null;
   ld_ratio: number | null;
   line_in_use: string;
@@ -166,10 +167,14 @@ const RollerProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, Progress
           dies_model: work.dies_model ?? '',
           dies_code: work.dies_code ?? '',
           supplier: work.supplier ?? '',
-          // ✅ Giữ nguyên field DB (dies_hole_mm) dù UI đổi label
-          dies_hole_mm: work.dies_hole_mm != null ? Number(work.dies_hole_mm) : null,
+
+          // ✅ SỬA: Giữ nguyên giá trị gốc (string), KHÔNG dùng Number()
+          // Vì DB là VARCHAR(50), có thể lưu "8x10", "No Hole", v.v.
+          dies_hole_mm: work.dies_hole_mm != null ? String(work.dies_hole_mm) : null,
+
           // ✅ Giữ nguyên field DB (press_length_mm) dù UI đổi label
           press_length_mm: work.press_length_mm ?? null,
+
           // ✅ Giữ field này nhưng không có UI
           ld_ratio: work.ld_ratio != null ? Number(work.ld_ratio) : null,
           line_in_use: work.line_in_use ?? '',
@@ -469,7 +474,7 @@ const RollerProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, Progress
                       placeholder="Chọn hoặc nhập Nhà cung cấp" />
                   </div>
 
-                  {/* ✅ SỬA: Roller Shell Hole (mm) - dùng input text + datalist */}
+                  {/* ✅ SỬA: Roller Shell Hole (mm) - dùng input text + datalist, KHÔNG ép Number() */}
                   <div className="col-md-4">
                     <label className="form-label">Roller Shell Hole (mm)</label>
                     <input
@@ -477,7 +482,7 @@ const RollerProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, Progress
                       className="form-control progress-modal-input"
                       list="shell-hole-list-progress"
                       value={form.dies_hole_mm ?? ''}
-                      onChange={(e) => setForm({ ...form, dies_hole_mm: e.target.value ? Number(e.target.value) : null })}
+                      onChange={(e) => setForm({ ...form, dies_hole_mm: e.target.value || null })}
                       placeholder="VD: 8x10, No Hole"
                     />
                     <datalist id="shell-hole-list-progress">
