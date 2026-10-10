@@ -10,7 +10,7 @@ import type { DigitalWork } from '../../../lib/db';
 import LoadingOverlay from '../../../components/LoadingOverlay';
 import ErrorState from '../../../components/ErrorState';
 import EmptyState from '../../../components/EmptyState';
-import { useTheme } from '../../../context/ThemeContext';   // ✅ Đổi path nếu cần
+import { useTheme } from '../../../context/ThemeContext';
 
 // ============================================================
 // Helpers
@@ -96,6 +96,32 @@ function EmptyChart() {
   );
 }
 
+// ✅ Component Tooltip tái sử dụng: hiện Die Hole + Số lượng
+function HoleTooltip({ active, payload, label, tooltipStyle, TEXT_COLOR, TOOLTIP_BORDER }: any) {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+  const holes: { hole: string; count: number }[] = data.holes || [];
+
+  return (
+    <div style={tooltipStyle}>
+      <div style={{ fontWeight: 700, marginBottom: 6, color: TEXT_COLOR }}>{label}</div>
+      <div style={{ marginBottom: 4 }}>
+        <strong>Tổng số lượng:</strong> {data.count}
+      </div>
+      {holes.length > 0 && (
+        <div style={{ borderTop: `1px solid ${TOOLTIP_BORDER}`, marginTop: 6, paddingTop: 6 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Chi tiết Die Hole:</div>
+          {holes.map((h, idx) => (
+            <div key={idx} style={{ fontSize: 11, marginBottom: 2 }}>
+              • Die Hole <strong>{h.hole}</strong>: {h.count} cái
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================================
 // Dashboard
 // ============================================================
@@ -103,11 +129,9 @@ export default function DashboardPage() {
   const { i18n } = useTranslation();
   const locale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
 
-  // ✅ Đọc theme hiện tại
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
-  // ✅ Màu động theo theme (đen cho sáng, trắng cho tối)
   const TEXT_COLOR = isDark ? '#e5e7eb' : '#1f2937';
   const MUTED_COLOR = isDark ? '#94a3b8' : '#6b7280';
   const GRID_COLOR = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(148,163,184,0.3)';
@@ -138,7 +162,6 @@ export default function DashboardPage() {
     queryFn: () => db.listWorks({ limit: 500 }),
   });
 
-  // ✅ THÊM: Query lấy dữ liệu cấu hình từ bảng app_settings
   const settingsQuery = useQuery({
     queryKey: ['settings', 'dashboard'],
     queryFn: () => db.listSettings(),
@@ -148,7 +171,7 @@ export default function DashboardPage() {
   const settings = useMemo(() => settingsQuery.data?.documents ?? [], [settingsQuery.data]);
 
   // ============================================================
-  // Stats tổng
+  // Stats tổng + Chi tiết Die Hole theo từng nhóm
   // ============================================================
   const stats = useMemo(() => {
     const total = works.length;
@@ -159,9 +182,12 @@ export default function DashboardPage() {
     let totalValue = 0;
 
     const byModel: Record<string, number> = {};
+    const byModelHole: Record<string, Record<string, number>> = {}; // ✅ Model -> {hole -> count}
     const byHole: Record<string, number> = {};
     const byPressLength: Record<string, number> = {};
+    const byPressHole: Record<string, Record<string, number>> = {}; // ✅ PressLength -> {hole -> count}
     const byLine: Record<string, number> = {};
+    const byLineHole: Record<string, Record<string, number>> = {}; // ✅ Line -> {hole -> count}
     const bySupplier: Record<string, number> = {};
     const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
@@ -177,18 +203,36 @@ export default function DashboardPage() {
       totalRemaining += remaining;
       totalValue += w.dies_price_vnd != null ? Number(w.dies_price_vnd) : 0;
 
-      if (w.dies_model) byModel[w.dies_model] = (byModel[w.dies_model] ?? 0) + 1;
-      if (w.dies_hole_mm != null) {
-        const hole = String(w.dies_hole_mm);
-        byHole[hole] = (byHole[hole] ?? 0) + 1;
+      const holeStr = w.dies_hole_mm != null ? String(w.dies_hole_mm) : '—';
+
+      // ✅ Theo Model + Hole
+      if (w.dies_model) {
+        byModel[w.dies_model] = (byModel[w.dies_model] ?? 0) + 1;
+        if (!byModelHole[w.dies_model]) byModelHole[w.dies_model] = {};
+        byModelHole[w.dies_model][holeStr] = (byModelHole[w.dies_model][holeStr] ?? 0) + 1;
       }
-      if (w.press_length_mm) byPressLength[w.press_length_mm] = (byPressLength[w.press_length_mm] ?? 0) + 1;
+
+      if (w.dies_hole_mm != null) {
+        byHole[holeStr] = (byHole[holeStr] ?? 0) + 1;
+      }
+
+      // ✅ Theo Press Length + Hole
+      if (w.press_length_mm) {
+        byPressLength[w.press_length_mm] = (byPressLength[w.press_length_mm] ?? 0) + 1;
+        if (!byPressHole[w.press_length_mm]) byPressHole[w.press_length_mm] = {};
+        byPressHole[w.press_length_mm][holeStr] = (byPressHole[w.press_length_mm][holeStr] ?? 0) + 1;
+      }
+
+      // ✅ Theo Line + Hole
       if (w.line_in_use) {
         const lines = w.line_in_use.split(',').map((s) => s.trim()).filter(Boolean);
         lines.forEach((l) => {
           byLine[l] = (byLine[l] ?? 0) + 1;
+          if (!byLineHole[l]) byLineHole[l] = {};
+          byLineHole[l][holeStr] = (byLineHole[l][holeStr] ?? 0) + 1;
         });
       }
+
       if (w.supplier) {
         const sup = w.supplier.trim().toUpperCase();
         bySupplier[sup] = (bySupplier[sup] ?? 0) + 1;
@@ -214,9 +258,12 @@ export default function DashboardPage() {
       totalValue,
       overallPercent,
       byModel,
+      byModelHole,
       byHole,
       byPressLength,
+      byPressHole,
       byLine,
+      byLineHole,
       bySupplier,
       byStatus,
       lowLifeDanger: lowLifeDanger.sort((a, b) => {
@@ -232,27 +279,49 @@ export default function DashboardPage() {
   // ============================================================
   // Chart data
   // ============================================================
+
+  // ✅ 1. Số lượng Die theo Model (có chi tiết Die Hole)
   const modelChartData = useMemo(() => {
     const known = MODEL_ORDER.filter((m) => stats.byModel[m] != null);
     return known.map((m) => ({
       name: m,
       count: stats.byModel[m],
       fill: MODEL_COLORS[m] ?? '#3b82f6',
+      holes: Object.entries(stats.byModelHole[m] ?? {}).map(([hole, count]) => ({ hole, count })),
     }));
-  }, [stats.byModel]);
+  }, [stats.byModel, stats.byModelHole]);
 
-  // ✅ CẤU HÌNH DIE: Mỗi cột là 1 cặp (Press Length + Die Hole), nhóm theo Model
+  // ✅ 2. Số lượng Die theo Line in use (có chi tiết Die Hole)
+  const lineChartData = useMemo(() => {
+    const known = LINE_ORDER.filter((l) => stats.byLine[l] != null);
+    return known.map((l) => ({
+      name: l,
+      count: stats.byLine[l],
+      holes: Object.entries(stats.byLineHole[l] ?? {}).map(([hole, count]) => ({ hole, count })),
+    }));
+  }, [stats.byLine, stats.byLineHole]);
+
+  // ✅ 3. Press Length (có chi tiết Die Hole)
+  const pressChartData = useMemo(() => {
+    const known = PRESS_ORDER.filter((p) => stats.byPressLength[p] != null);
+    return known.map((p) => ({
+      name: p,
+      count: stats.byPressLength[p],
+      holes: Object.entries(stats.byPressHole[p] ?? {}).map(([hole, count]) => ({ hole, count })),
+    }));
+  }, [stats.byPressLength, stats.byPressHole]);
+
+  // Cấu hình Die (giữ nguyên)
   const configByPressData = useMemo(() => {
     const items: {
-      name: string;           // Label trên trục X: "60-15 | 2.8"
-      model: string;          // Model để tô màu
+      name: string;
+      model: string;
       pressLength: string;
       dieHole: string;
       standardTon: number;
     }[] = [];
 
     settings.forEach((s) => {
-      // Chỉ lấy key của Die (bỏ qua Roller)
       if (s.key.startsWith('std_die_') && s.dies_model && s.press_length_mm) {
         items.push({
           name: `${s.press_length_mm} | ${s.die_hole ?? '—'}`,
@@ -264,7 +333,6 @@ export default function DashboardPage() {
       }
     });
 
-    // Sắp xếp: ưu tiên theo MODEL_ORDER, sau đó theo PRESS_ORDER
     items.sort((a, b) => {
       const modelIdxA = MODEL_ORDER.indexOf(a.model);
       const modelIdxB = MODEL_ORDER.indexOf(b.model);
@@ -278,16 +346,6 @@ export default function DashboardPage() {
 
     return items;
   }, [settings]);
-
-  const pressChartData = useMemo(() => {
-    const known = PRESS_ORDER.filter((p) => stats.byPressLength[p] != null);
-    return known.map((p) => ({ name: p, count: stats.byPressLength[p] }));
-  }, [stats.byPressLength]);
-
-  const lineChartData = useMemo(() => {
-    const known = LINE_ORDER.filter((l) => stats.byLine[l] != null);
-    return known.map((l) => ({ name: l, count: stats.byLine[l] }));
-  }, [stats.byLine]);
 
   const supplierChartData = useMemo(() => {
     const items = Object.keys(stats.bySupplier);
@@ -381,6 +439,7 @@ export default function DashboardPage() {
 
       {/* Hàng 1: Model + Config + Line */}
       <div className="row g-3">
+        {/* ✅ 1. Model với Tooltip Die Hole */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Số lượng Die theo Model" height={260}>
             {modelChartData.length === 0 ? (
@@ -391,7 +450,15 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 10, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip
+                    content={
+                      <HoleTooltip
+                        tooltipStyle={tooltipStyle}
+                        TEXT_COLOR={TEXT_COLOR}
+                        TOOLTIP_BORDER={TOOLTIP_BORDER}
+                      />
+                    }
+                  />
                   <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={50}>
                     <LabelList dataKey="count" {...labelProps} />
                     {modelChartData.map((entry) => (
@@ -404,7 +471,7 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
-        {/* ✅ THAY THẾ: Biểu đồ cấu hình Die theo Press Length */}
+        {/* Cấu hình Die */}
         <div className="col-12 col-lg-4">
           <ChartCard title="⚙️ Cấu hình Standard Ton theo Press Length (Die)" height={280}>
             {configByPressData.length === 0 ? (
@@ -462,6 +529,7 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
+        {/* ✅ 2. Line in use với Tooltip Die Hole */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Số lượng Die theo Line in use" height={260}>
             {lineChartData.length === 0 ? (
@@ -472,7 +540,15 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip
+                    content={
+                      <HoleTooltip
+                        tooltipStyle={tooltipStyle}
+                        TEXT_COLOR={TEXT_COLOR}
+                        TOOLTIP_BORDER={TOOLTIP_BORDER}
+                      />
+                    }
+                  />
                   <Bar dataKey="count" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={50}>
                     <LabelList dataKey="count" {...labelProps} />
                   </Bar>
@@ -483,8 +559,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Hàng 2: Press Length */}
+      {/* Hàng 2: Press Length 60-x, 65-x, 70-x/75-x */}
       <div className="row g-3">
+        {/* ✅ 3. Press Length 60-x với Tooltip Die Hole */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Press Length 60-x (mm)" height={260}>
             {press60Data.length === 0 ? (
@@ -495,7 +572,15 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip
+                    content={
+                      <HoleTooltip
+                        tooltipStyle={tooltipStyle}
+                        TEXT_COLOR={TEXT_COLOR}
+                        TOOLTIP_BORDER={TOOLTIP_BORDER}
+                      />
+                    }
+                  />
                   <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={50}>
                     <LabelList dataKey="count" {...labelProps} />
                   </Bar>
@@ -505,6 +590,7 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
+        {/* ✅ 4. Press Length 65-x với Tooltip Die Hole */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Press Length 65-x (mm)" height={260}>
             {press65Data.length === 0 ? (
@@ -515,7 +601,15 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip
+                    content={
+                      <HoleTooltip
+                        tooltipStyle={tooltipStyle}
+                        TEXT_COLOR={TEXT_COLOR}
+                        TOOLTIP_BORDER={TOOLTIP_BORDER}
+                      />
+                    }
+                  />
                   <Bar dataKey="count" fill="#ec4899" radius={[6, 6, 0, 0]} maxBarSize={50}>
                     <LabelList dataKey="count" {...labelProps} />
                   </Bar>
@@ -525,6 +619,7 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
+        {/* ✅ 5. Press Length 70-x / 75-x với Tooltip Die Hole */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Press Length 70-x / 75-x (mm)" height={260}>
             {press70Data.length === 0 ? (
@@ -535,7 +630,15 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip
+                    content={
+                      <HoleTooltip
+                        tooltipStyle={tooltipStyle}
+                        TEXT_COLOR={TEXT_COLOR}
+                        TOOLTIP_BORDER={TOOLTIP_BORDER}
+                      />
+                    }
+                  />
                   <Bar dataKey="count" fill="#14b8a6" radius={[6, 6, 0, 0]} maxBarSize={50}>
                     <LabelList dataKey="count" {...labelProps} />
                   </Bar>
