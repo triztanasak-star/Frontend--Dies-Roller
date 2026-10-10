@@ -143,7 +143,7 @@ export default function DashboardPage1() {
     queryFn: () => db.listWorks({ limit: 500, type: 'roller' }),
   });
 
-  // ✅ THÊM: Query lấy dữ liệu cấu hình từ bảng app_settings
+  // ✅ Query lấy dữ liệu cấu hình từ bảng app_settings
   const settingsQuery = useQuery({
     queryKey: ['settings', 'dashboard'],
     queryFn: () => db.listSettings(),
@@ -500,26 +500,27 @@ export default function DashboardPage1() {
         </div>
       </div>
 
-      {/* ✅ Hàng 2: Roller Shell Type (thay cho Chiều dài Roller) */}
+      {/* ✅ HÀNG 2: 3 biểu đồ trên cùng 1 hàng (Shell Type + Supplier + Status) */}
       <div className="row g-3">
-        <div className="col-12">
-          <ChartCard title="📊 Số lượng Roller theo Roller Shell Type" height={300}>
+        {/* Cột 1: Roller Shell Type */}
+        <div className="col-12 col-lg-4">
+          <ChartCard title="📊 Số lượng Roller theo Roller Shell Type" height={320}>
             {shellTypeChartData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={shellTypeChartData}
-                  margin={{ top: 20, right: 10, left: -20, bottom: 60 }}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 80 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis
                     dataKey="name"
                     stroke={MUTED_COLOR}
-                    tick={{ fontSize: 11, fill: TEXT_COLOR }}
-                    angle={-25}
+                    tick={{ fontSize: 10, fill: TEXT_COLOR }}
+                    angle={-30}
                     textAnchor="end"
-                    height={70}
+                    height={80}
                     interval={0}
                   />
                   <YAxis
@@ -528,7 +529,7 @@ export default function DashboardPage1() {
                     tick={{ fontSize: 11, fill: TEXT_COLOR }}
                   />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={45}>
                     <LabelList dataKey="count" {...labelProps} />
                   </Bar>
                 </BarChart>
@@ -536,17 +537,18 @@ export default function DashboardPage1() {
             )}
           </ChartCard>
         </div>
-      </div>
 
-      {/* Hàng 3: Supplier + Status */}
-      <div className="row g-3">
-        <div className="col-12 col-lg-7">
-          <ChartCard title="📊 Số lượng Roller theo Supplier" height={280}>
+        {/* Cột 2: Supplier */}
+        <div className="col-12 col-lg-4">
+          <ChartCard title="📊 Số lượng Roller theo Supplier" height={320}>
             {supplierChartData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={supplierChartData} margin={{ top: 20, right: 10, left: -20, bottom: 60 }}>
+                <BarChart
+                  data={supplierChartData}
+                  margin={{ top: 20, right: 10, left: -20, bottom: 80 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
                   <XAxis
                     dataKey="name"
@@ -554,10 +556,14 @@ export default function DashboardPage1() {
                     tick={{ fontSize: 10, fill: TEXT_COLOR }}
                     angle={-40}
                     textAnchor="end"
-                    height={60}
+                    height={80}
                     interval={0}
                   />
-                  <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
+                  <YAxis
+                    stroke={MUTED_COLOR}
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: TEXT_COLOR }}
+                  />
                   <Tooltip contentStyle={tooltipStyle} />
                   <Bar dataKey="count" fill="#10b981" radius={[6, 6, 0, 0]} maxBarSize={40}>
                     <LabelList dataKey="count" {...labelProps} />
@@ -568,8 +574,9 @@ export default function DashboardPage1() {
           </ChartCard>
         </div>
 
-        <div className="col-12 col-lg-5">
-          <ChartCard title="📊 Phân bố theo trạng thái" height={280}>
+        {/* Cột 3: Status */}
+        <div className="col-12 col-lg-4">
+          <ChartCard title="📊 Phân bố theo trạng thái" height={320}>
             {statusChartData.length === 0 ? (
               <EmptyChart />
             ) : (
