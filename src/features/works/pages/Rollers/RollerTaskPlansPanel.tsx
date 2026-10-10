@@ -28,10 +28,13 @@ const formatInputValue = (str: string): string => {
 };
 
 export default function RollerTaskPlansPanel({ workId, canEdit }: { workId: number; canEdit: boolean }) {
-  const { data, isLoading } = useTaskPlans(workId);
-  const createPlan = useCreateTaskPlan();
-  const updatePlan = useUpdateTaskPlan(workId);
-  const deletePlan = useDeleteTaskPlan(workId);
+  // ✅ SỬA: Truyền 'roller' để lấy đúng kế hoạch của Roller
+  const { data, isLoading } = useTaskPlans(workId, 'roller');
+  
+  // ✅ SỬA: Truyền 'roller' vào các mutation (nếu hook của bạn hỗ trợ tham số thứ 2)
+  const createPlan = useCreateTaskPlan('roller'); 
+  const updatePlan = useUpdateTaskPlan(workId, 'roller');
+  const deletePlan = useDeleteTaskPlan(workId, 'roller');
 
   const [stepName, setStepName] = useState('');
   const [dueDate, setDueDate] = useState('');

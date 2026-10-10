@@ -130,12 +130,22 @@ export default function DashboardPage() {
     padding: '6px 10px',
   };
 
+  // ============================================================
+  // Queries
+  // ============================================================
   const worksQuery = useQuery({
     queryKey: ['works', 'dashboard'],
     queryFn: () => db.listWorks({ limit: 500 }),
   });
 
+  // ✅ THÊM: Query lấy dữ liệu cấu hình từ bảng app_settings
+  const settingsQuery = useQuery({
+    queryKey: ['settings', 'dashboard'],
+    queryFn: () => db.listSettings(),
+  });
+
   const works = useMemo(() => worksQuery.data?.documents ?? [], [worksQuery.data]);
+  const settings = useMemo(() => settingsQuery.data?.documents ?? [], [settingsQuery.data]);
 
   // ============================================================
   // Stats tổng
@@ -231,10 +241,43 @@ export default function DashboardPage() {
     }));
   }, [stats.byModel]);
 
-  const holeChartData = useMemo(() => {
-    const known = HOLE_ORDER.filter((h) => stats.byHole[h] != null);
-    return known.map((h) => ({ name: h, count: stats.byHole[h] }));
-  }, [stats.byHole]);
+  // ✅ CẤU HÌNH DIE: Mỗi cột là 1 cặp (Press Length + Die Hole), nhóm theo Model
+  const configByPressData = useMemo(() => {
+    const items: {
+      name: string;           // Label trên trục X: "60-15 | 2.8"
+      model: string;          // Model để tô màu
+      pressLength: string;
+      dieHole: string;
+      standardTon: number;
+    }[] = [];
+
+    settings.forEach((s) => {
+      // Chỉ lấy key của Die (bỏ qua Roller)
+      if (s.key.startsWith('std_die_') && s.dies_model && s.press_length_mm) {
+        items.push({
+          name: `${s.press_length_mm} | ${s.die_hole ?? '—'}`,
+          model: s.dies_model,
+          pressLength: s.press_length_mm,
+          dieHole: s.die_hole ?? '—',
+          standardTon: Number(s.value || 0),
+        });
+      }
+    });
+
+    // Sắp xếp: ưu tiên theo MODEL_ORDER, sau đó theo PRESS_ORDER
+    items.sort((a, b) => {
+      const modelIdxA = MODEL_ORDER.indexOf(a.model);
+      const modelIdxB = MODEL_ORDER.indexOf(b.model);
+      if (modelIdxA !== modelIdxB) {
+        return (modelIdxA === -1 ? 999 : modelIdxA) - (modelIdxB === -1 ? 999 : modelIdxB);
+      }
+      const pressIdxA = PRESS_ORDER.indexOf(a.pressLength);
+      const pressIdxB = PRESS_ORDER.indexOf(b.pressLength);
+      return (pressIdxA === -1 ? 999 : pressIdxA) - (pressIdxB === -1 ? 999 : pressIdxB);
+    });
+
+    return items;
+  }, [settings]);
 
   const pressChartData = useMemo(() => {
     const known = PRESS_ORDER.filter((p) => stats.byPressLength[p] != null);
@@ -272,8 +315,8 @@ export default function DashboardPage() {
   // ============================================================
   // Loading / Error
   // ============================================================
-  if (worksQuery.isLoading) return <LoadingOverlay />;
-  if (worksQuery.isError) return <ErrorState />;
+  if (worksQuery.isLoading || settingsQuery.isLoading) return <LoadingOverlay />;
+  if (worksQuery.isError || settingsQuery.isError) return <ErrorState />;
 
   return (
     <div
@@ -336,7 +379,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Hàng 1: Model + Hole + Line */}
+      {/* Hàng 1: Model + Config + Line */}
       <div className="row g-3">
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Số lượng Die theo Model" height={260}>
@@ -361,19 +404,57 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
+        {/* ✅ THAY THẾ: Biểu đồ cấu hình Die theo Press Length */}
         <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Số lượng Die theo Dies Hole (mm)" height={260}>
-            {holeChartData.length === 0 ? (
+          <ChartCard title="⚙️ Cấu hình Standard Ton theo Press Length (Die)" height={280}>
+            {configByPressData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={holeChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <BarChart
+                  data={configByPressData}
+                  margin={{ top: 25, right: 10, left: -20, bottom: 40 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-                  <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#0ea5e9" radius={[6, 6, 0, 0]} maxBarSize={50}>
-                    <LabelList dataKey="count" {...labelProps} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={MUTED_COLOR}
+                    tick={{ fontSize: 9, fill: TEXT_COLOR }}
+                    angle={-30}
+                    textAnchor="end"
+                    height={55}
+                    interval={0}
+                  />
+                  <YAxis stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div style={tooltipStyle}>
+                            <div style={{ fontWeight: 700, marginBottom: 4 }}>{data.model}</div>
+                            <div>Press Length: <strong>{data.pressLength}</strong></div>
+                            <div>Die Hole: <strong>{data.dieHole}</strong></div>
+                            <div>Tiêu chuẩn: <strong>{data.standardTon.toLocaleString('vi-VN')} tấn</strong></div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="standardTon" radius={[6, 6, 0, 0]} maxBarSize={45}>
+                    <LabelList
+                      dataKey="standardTon"
+                      position="top"
+                      fill={TEXT_COLOR}
+                      fontSize={10}
+                      fontWeight={700}
+                      formatter={(value: number) => value.toLocaleString('vi-VN')}
+                    />
+                    {configByPressData.map((entry, idx) => (
+                      <Cell key={idx} fill={MODEL_COLORS[entry.model] ?? '#3b82f6'} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
