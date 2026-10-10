@@ -143,9 +143,20 @@ export default function DashboardPage1() {
     queryFn: () => db.listWorks({ limit: 500, type: 'roller' }),
   });
 
+  // ✅ THÊM: Query lấy dữ liệu cấu hình từ bảng app_settings
+  const settingsQuery = useQuery({
+    queryKey: ['settings', 'dashboard'],
+    queryFn: () => db.listSettings(),
+  });
+
   const rollers = useMemo(
     () => rollersQuery.data?.documents ?? [],
     [rollersQuery.data],
+  );
+
+  const settings = useMemo(
+    () => settingsQuery.data?.documents ?? [],
+    [settingsQuery.data],
   );
 
   // ============================================================
@@ -160,8 +171,8 @@ export default function DashboardPage1() {
     let totalValue = 0;
 
     const byModel: Record<string, number> = {};
-    const byShellHole: Record<string, number> = {};   // ✅ MỤC 6
-    const byShellType: Record<string, number> = {};   // ✅ MỤC 7
+    const byShellHole: Record<string, number> = {};
+    const byShellType: Record<string, number> = {};
     const byLine: Record<string, number> = {};
     const bySupplier: Record<string, number> = {};
     const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -180,13 +191,11 @@ export default function DashboardPage1() {
 
       if (r.dies_model) byModel[r.dies_model] = (byModel[r.dies_model] ?? 0) + 1;
 
-      // ✅ MỤC 6: Roller Shell Hole — map từ dies_hole_mm (convert sang string)
       if (r.dies_hole_mm != null) {
         const hole = String(r.dies_hole_mm);
         byShellHole[hole] = (byShellHole[hole] ?? 0) + 1;
       }
 
-      // ✅ MỤC 7: Roller Shell Type — map từ press_length_mm
       if (r.press_length_mm) {
         byShellType[r.press_length_mm] = (byShellType[r.press_length_mm] ?? 0) + 1;
       }
@@ -282,11 +291,49 @@ export default function DashboardPage1() {
       }));
   }, [stats.byStatus]);
 
+  // ✅ CẤU HÌNH ROLLER: Mỗi cột là 1 cặp (Model + Shell Type)
+  // Dữ liệu lấy từ bảng app_settings, lọc key bắt đầu bằng 'std_roller_'
+  const configByShellTypeData = useMemo(() => {
+    const items: {
+      name: string;           // Label trên trục X: "CPM 7726SW | Dimpled"
+      model: string;          // Model để tô màu
+      shellType: string;      // Roller Shell Type
+      standardTon: number;    // Standard Ton
+    }[] = [];
+
+    settings.forEach((s) => {
+      // ✅ CHỈ LẤY KEY CỦA ROLLER (bỏ qua Die)
+      // Với Roller, trường press_length_mm trong DB thực chất lưu Shell Type
+      if (s.key.startsWith('std_roller_') && s.dies_model && s.press_length_mm) {
+        items.push({
+          name: `${s.dies_model} | ${s.press_length_mm}`, // "CPM 7726SW | Dimpled"
+          model: s.dies_model,
+          shellType: s.press_length_mm,
+          standardTon: Number(s.value || 0),
+        });
+      }
+    });
+
+    // Sắp xếp theo MODEL_ORDER, sau đó theo SHELL_TYPE_ORDER
+    items.sort((a, b) => {
+      const modelIdxA = MODEL_ORDER.indexOf(a.model);
+      const modelIdxB = MODEL_ORDER.indexOf(b.model);
+      if (modelIdxA !== modelIdxB) {
+        return (modelIdxA === -1 ? 999 : modelIdxA) - (modelIdxB === -1 ? 999 : modelIdxB);
+      }
+      const typeIdxA = SHELL_TYPE_ORDER.indexOf(a.shellType);
+      const typeIdxB = SHELL_TYPE_ORDER.indexOf(b.shellType);
+      return (typeIdxA === -1 ? 999 : typeIdxA) - (typeIdxB === -1 ? 999 : typeIdxB);
+    });
+
+    return items;
+  }, [settings]);
+
   // ============================================================
   // Loading / Error
   // ============================================================
-  if (rollersQuery.isLoading) return <LoadingOverlay />;
-  if (rollersQuery.isError) return <ErrorState />;
+  if (rollersQuery.isLoading || settingsQuery.isLoading) return <LoadingOverlay />;
+  if (rollersQuery.isError || settingsQuery.isError) return <ErrorState />;
 
   return (
     <div
@@ -349,7 +396,7 @@ export default function DashboardPage1() {
         </div>
       </div>
 
-      {/* Hàng 1: Model + Shell Hole + Line */}
+      {/* Hàng 1: Model + Shell Hole + Config */}
       <div className="row g-3">
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Số lượng Roller theo Model" height={260}>
@@ -395,19 +442,56 @@ export default function DashboardPage1() {
           </ChartCard>
         </div>
 
+        {/* ✅ Biểu đồ cấu hình Roller theo Shell Type */}
         <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Số lượng Roller theo Line in use" height={260}>
-            {lineChartData.length === 0 ? (
+          <ChartCard title="⚙️ Cấu hình Standard Ton theo Shell Type (Roller)" height={280}>
+            {configByShellTypeData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={lineChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <BarChart
+                  data={configByShellTypeData}
+                  margin={{ top: 25, right: 10, left: -20, bottom: 40 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-                  <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={50}>
-                    <LabelList dataKey="count" {...labelProps} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={MUTED_COLOR}
+                    tick={{ fontSize: 9, fill: TEXT_COLOR }}
+                    angle={-30}
+                    textAnchor="end"
+                    height={70}
+                    interval={0}
+                  />
+                  <YAxis stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div style={tooltipStyle}>
+                            <div style={{ fontWeight: 700, marginBottom: 4 }}>{data.model}</div>
+                            <div>Shell Type: <strong>{data.shellType}</strong></div>
+                            <div>Tiêu chuẩn: <strong>{data.standardTon.toLocaleString('vi-VN')} tấn</strong></div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="standardTon" radius={[6, 6, 0, 0]} maxBarSize={45}>
+                    <LabelList
+                      dataKey="standardTon"
+                      position="top"
+                      fill={TEXT_COLOR}
+                      fontSize={10}
+                      fontWeight={700}
+                      formatter={(value: number) => value.toLocaleString('vi-VN')}
+                    />
+                    {configByShellTypeData.map((entry, idx) => (
+                      <Cell key={idx} fill={MODEL_COLORS[entry.model] ?? '#3b82f6'} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
