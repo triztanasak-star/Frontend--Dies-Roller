@@ -96,7 +96,7 @@ function EmptyChart() {
   );
 }
 
-// ✅ Component Tooltip tái sử dụng: hiện Die Hole + Số lượng
+// ✅ Component Tooltip tái sử dụng: hiện Die Hole + Số lượng (cho Model, Press Length)
 function HoleTooltip({ active, payload, label, tooltipStyle, TEXT_COLOR, TOOLTIP_BORDER }: any) {
   if (!active || !payload || !payload.length) return null;
   const data = payload[0].payload;
@@ -182,12 +182,14 @@ export default function DashboardPage() {
     let totalValue = 0;
 
     const byModel: Record<string, number> = {};
-    const byModelHole: Record<string, Record<string, number>> = {}; // ✅ Model -> {hole -> count}
+    const byModelHole: Record<string, Record<string, number>> = {};
     const byHole: Record<string, number> = {};
     const byPressLength: Record<string, number> = {};
-    const byPressHole: Record<string, Record<string, number>> = {}; // ✅ PressLength -> {hole -> count}
+    const byPressHole: Record<string, Record<string, number>> = {};
     const byLine: Record<string, number> = {};
-    const byLineHole: Record<string, Record<string, number>> = {}; // ✅ Line -> {hole -> count}
+    const byLineHole: Record<string, Record<string, number>> = {};
+    // ✅ Line -> { "PressLength|Hole" -> count }
+    const byLinePressHole: Record<string, Record<string, number>> = {};
     const bySupplier: Record<string, number> = {};
     const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
@@ -204,6 +206,7 @@ export default function DashboardPage() {
       totalValue += w.dies_price_vnd != null ? Number(w.dies_price_vnd) : 0;
 
       const holeStr = w.dies_hole_mm != null ? String(w.dies_hole_mm) : '—';
+      const pressStr = w.press_length_mm || '—';
 
       // ✅ Theo Model + Hole
       if (w.dies_model) {
@@ -223,13 +226,16 @@ export default function DashboardPage() {
         byPressHole[w.press_length_mm][holeStr] = (byPressHole[w.press_length_mm][holeStr] ?? 0) + 1;
       }
 
-      // ✅ Theo Line + Hole
+      // ✅ Theo Line + Press Length + Hole
       if (w.line_in_use) {
         const lines = w.line_in_use.split(',').map((s) => s.trim()).filter(Boolean);
         lines.forEach((l) => {
           byLine[l] = (byLine[l] ?? 0) + 1;
           if (!byLineHole[l]) byLineHole[l] = {};
           byLineHole[l][holeStr] = (byLineHole[l][holeStr] ?? 0) + 1;
+          if (!byLinePressHole[l]) byLinePressHole[l] = {};
+          const key = `${pressStr}|${holeStr}`;
+          byLinePressHole[l][key] = (byLinePressHole[l][key] ?? 0) + 1;
         });
       }
 
@@ -264,6 +270,7 @@ export default function DashboardPage() {
       byPressHole,
       byLine,
       byLineHole,
+      byLinePressHole,
       bySupplier,
       byStatus,
       lowLifeDanger: lowLifeDanger.sort((a, b) => {
@@ -291,15 +298,26 @@ export default function DashboardPage() {
     }));
   }, [stats.byModel, stats.byModelHole]);
 
-  // ✅ 2. Số lượng Die theo Line in use (có chi tiết Die Hole)
+  // ✅ 2. Số lượng Die theo Line in use (có chi tiết Press Length + Die Hole)
   const lineChartData = useMemo(() => {
     const known = LINE_ORDER.filter((l) => stats.byLine[l] != null);
-    return known.map((l) => ({
-      name: l,
-      count: stats.byLine[l],
-      holes: Object.entries(stats.byLineHole[l] ?? {}).map(([hole, count]) => ({ hole, count })),
-    }));
-  }, [stats.byLine, stats.byLineHole]);
+    return known.map((l) => {
+      const details = Object.entries(stats.byLinePressHole[l] ?? {}).map(([key, count]) => {
+        const [pressLength, hole] = key.split('|');
+        return { pressLength, hole, count };
+      });
+      details.sort((a, b) => {
+        const idxA = PRESS_ORDER.indexOf(a.pressLength);
+        const idxB = PRESS_ORDER.indexOf(b.pressLength);
+        return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+      });
+      return {
+        name: l,
+        count: stats.byLine[l],
+        details,
+      };
+    });
+  }, [stats.byLine, stats.byLinePressHole]);
 
   // ✅ 3. Press Length (có chi tiết Die Hole)
   const pressChartData = useMemo(() => {
@@ -311,7 +329,7 @@ export default function DashboardPage() {
     }));
   }, [stats.byPressLength, stats.byPressHole]);
 
-  // Cấu hình Die (giữ nguyên)
+  // Cấu hình Die
   const configByPressData = useMemo(() => {
     const items: {
       name: string;
@@ -529,7 +547,7 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
-        {/* ✅ 2. Line in use với Tooltip Die Hole */}
+        {/* ✅ 2. Line in use với Tooltip Press Length + Die Hole */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Số lượng Die theo Line in use" height={260}>
             {lineChartData.length === 0 ? (
@@ -541,13 +559,31 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <Tooltip
-                    content={
-                      <HoleTooltip
-                        tooltipStyle={tooltipStyle}
-                        TEXT_COLOR={TEXT_COLOR}
-                        TOOLTIP_BORDER={TOOLTIP_BORDER}
-                      />
-                    }
+                    contentStyle={tooltipStyle}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div style={tooltipStyle}>
+                            <div style={{ fontWeight: 700, marginBottom: 6 }}>{data.name}</div>
+                            <div style={{ marginBottom: 4 }}>
+                              <strong>Tổng số lượng:</strong> {data.count}
+                            </div>
+                            {data.details && data.details.length > 0 && (
+                              <div style={{ borderTop: `1px solid ${TOOLTIP_BORDER}`, marginTop: 6, paddingTop: 6 }}>
+                                <div style={{ fontWeight: 600, marginBottom: 4 }}>Chi tiết:</div>
+                                {data.details.map((d: any, idx: number) => (
+                                  <div key={idx} style={{ fontSize: 11, marginBottom: 2 }}>
+                                    • Press Length <strong>{d.pressLength}</strong> - Die Hole <strong>{d.hole}</strong>: {d.count} cái
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
                   />
                   <Bar dataKey="count" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={50}>
                     <LabelList dataKey="count" {...labelProps} />
