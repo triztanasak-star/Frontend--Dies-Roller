@@ -68,6 +68,16 @@ function sortByOrder(items: string[], order: string[]): string[] {
   return [...known, ...unknown];
 }
 
+// ✅ Rút gọn tên Model để hiển thị trên trục X
+function shortenModelName(model: string): string {
+  const map: Record<string, string> = {
+    'CPM 7726SW': 'CPM 7726',
+    'PM 717-TW': 'PM 717',
+    'CPM 7730SW': 'CPM 7730',
+  };
+  return map[model] || model;
+}
+
 // ============================================================
 // Chart wrapper
 // ============================================================
@@ -93,6 +103,45 @@ function EmptyChart() {
     <div className="d-flex align-items-center justify-content-center h-100 text-muted">
       Chưa có dữ liệu
     </div>
+  );
+}
+
+// ✅ Custom Tick: Hiển thị tên Line + Danh sách Model (2 dòng)
+function CustomLineTick(props: any) {
+  const { x, y, payload, data, TEXT_COLOR, MUTED_COLOR } = props;
+  // Tìm item tương ứng trong data để lấy danh sách models
+  const item = data.find((d: any) => d.name === payload.value);
+  const models: string[] = item?.models || [];
+  const modelsText = models.map(shortenModelName).join(', ');
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {/* Dòng 1: Tên Line */}
+      <text
+        x={0}
+        y={0}
+        dy={12}
+        textAnchor="middle"
+        fill={TEXT_COLOR}
+        fontSize={11}
+        fontWeight={600}
+      >
+        {payload.value}
+      </text>
+      {/* Dòng 2: Danh sách Model */}
+      {modelsText && (
+        <text
+          x={0}
+          y={0}
+          dy={26}
+          textAnchor="middle"
+          fill={MUTED_COLOR}
+          fontSize={9}
+        >
+          {modelsText}
+        </text>
+      )}
+    </g>
   );
 }
 
@@ -122,7 +171,7 @@ function HoleTooltip({ active, payload, label, tooltipStyle, TEXT_COLOR, TOOLTIP
   );
 }
 
-// ✅ Tooltip MỚI cho Press Length: hiện Model + Die Hole + Số lượng
+// ✅ Tooltip cho Press Length: hiện Model + Die Hole + Số lượng
 function PressModelHoleTooltip({ active, payload, label, tooltipStyle, TEXT_COLOR, TOOLTIP_BORDER }: any) {
   if (!active || !payload || !payload.length) return null;
   const data = payload[0].payload;
@@ -212,11 +261,12 @@ export default function DashboardPage() {
     const byHole: Record<string, number> = {};
     const byPressLength: Record<string, number> = {};
     const byPressHole: Record<string, Record<string, number>> = {};
-    // ✅ Press Length -> { "Model|Hole" -> count }
     const byPressModelHole: Record<string, Record<string, number>> = {};
     const byLine: Record<string, number> = {};
     const byLineHole: Record<string, Record<string, number>> = {};
     const byLineModelPressHole: Record<string, Record<string, number>> = {};
+    // ✅ Line -> Set các Model đang dùng
+    const byLineModels: Record<string, Set<string>> = {};
     const bySupplier: Record<string, number> = {};
     const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
@@ -267,6 +317,9 @@ export default function DashboardPage() {
           if (!byLineModelPressHole[l]) byLineModelPressHole[l] = {};
           const key = `${modelStr}|${pressStr}|${holeStr}`;
           byLineModelPressHole[l][key] = (byLineModelPressHole[l][key] ?? 0) + 1;
+          // ✅ Ghi nhận Model vào Line
+          if (!byLineModels[l]) byLineModels[l] = new Set();
+          if (w.dies_model) byLineModels[l].add(w.dies_model);
         });
       }
 
@@ -303,6 +356,7 @@ export default function DashboardPage() {
       byLine,
       byLineHole,
       byLineModelPressHole,
+      byLineModels,
       bySupplier,
       byStatus,
       lowLifeDanger: lowLifeDanger.sort((a, b) => {
@@ -348,13 +402,21 @@ export default function DashboardPage() {
         const pressIdxB = PRESS_ORDER.indexOf(b.pressLength);
         return (pressIdxA === -1 ? 999 : pressIdxA) - (pressIdxB === -1 ? 999 : pressIdxB);
       });
+      // ✅ Lấy danh sách Model (sắp xếp theo MODEL_ORDER)
+      const modelsSet = stats.byLineModels[l];
+      const models = modelsSet
+        ? MODEL_ORDER.filter((m) => modelsSet.has(m)).concat(
+            [...modelsSet].filter((m) => !MODEL_ORDER.includes(m))
+          )
+        : [];
       return {
         name: l,
         count: stats.byLine[l],
         details,
+        models,
       };
     });
-  }, [stats.byLine, stats.byLineModelPressHole]);
+  }, [stats.byLine, stats.byLineModelPressHole, stats.byLineModels]);
 
   // ✅ 3. Press Length với chi tiết Model + Die Hole
   const pressChartData = useMemo(() => {
@@ -595,16 +657,29 @@ export default function DashboardPage() {
           </ChartCard>
         </div>
 
-        {/* ✅ 2. Line in use với Tooltip Model + Press Length + Die Hole */}
+        {/* ✅ 2. Line in use với Custom Tick hiển thị Model */}
         <div className="col-12 col-lg-4">
-          <ChartCard title="📊 Số lượng Die theo Line in use" height={260}>
+          <ChartCard title="📊 Số lượng Die theo Line in use" height={280}>
             {lineChartData.length === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={lineChartData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                <BarChart data={lineChartData} margin={{ top: 20, right: 10, left: -20, bottom: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-                  <XAxis dataKey="name" stroke={MUTED_COLOR} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={MUTED_COLOR}
+                    tick={(props) => (
+                      <CustomLineTick
+                        {...props}
+                        data={lineChartData}
+                        TEXT_COLOR={TEXT_COLOR}
+                        MUTED_COLOR={MUTED_COLOR}
+                      />
+                    )}
+                    height={45}
+                    interval={0}
+                  />
                   <YAxis stroke={MUTED_COLOR} allowDecimals={false} tick={{ fontSize: 11, fill: TEXT_COLOR }} />
                   <Tooltip
                     contentStyle={tooltipStyle}
