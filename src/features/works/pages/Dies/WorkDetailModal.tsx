@@ -26,6 +26,17 @@ function fmtDateTime(dateStr: string | null | undefined, locale: string): string
   return d.toLocaleString(locale);
 }
 
+// ✅ Helper: Format ngày dạng dd/mm/yyyy
+function fmtDateShort(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 // ============================================================
 // Component hiển thị danh sách tài liệu đính kèm
 // ============================================================
@@ -86,6 +97,94 @@ function WorkAttachmentsList({ workId, category }: { workId: number; category?: 
             {isImage ? <FiImage size={12} /> : <FiPaperclip size={12} />}
             {' '}{file.original_name}
           </a>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// ✅ MỚI: Component hiển thị LỊCH SỬ DIE dạng danh sách có STT
+// ============================================================
+function WorkHistoryList({ workId }: { workId: number }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['task_plans', workId],
+    queryFn: async () => {
+      const res: any = await db.listTaskPlans(workId);
+      return Array.isArray(res) ? res : (res?.documents || res?.data || []);
+    },
+  });
+
+  const plans = (data ?? []).slice().sort((a: any, b: any) => (a.id ?? 0) - (b.id ?? 0));
+
+  if (isLoading) {
+    return <span className="text-muted small">Đang tải lịch sử...</span>;
+  }
+
+  if (plans.length === 0) {
+    return <span className="text-muted small">—</span>;
+  }
+
+  return (
+    <div
+      className="d-flex flex-column gap-2"
+      style={{
+        maxHeight: 320,
+        overflowY: 'auto',
+        paddingRight: 4,
+      }}
+    >
+      {plans.map((p: any, idx: number) => {
+        const stepName = p.step_name || p.name || '(Không tên)';
+        const tons = p.progress_percent ?? p.progress ?? 0;
+        const dueDate = p.due_date ? fmtDateShort(p.due_date) : '';
+        const status = p.status;
+        const isDone = status === 'done' || status === 'Hoàn thành';
+        const isInProgress = status === 'in_progress' || status === 'Đang thực hiện';
+
+        return (
+          <div
+            key={p.id || idx}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--border-color, #2d3748)',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: '#94a3b8',
+                  minWidth: 22,
+                  flexShrink: 0,
+                }}
+              >
+                {idx + 1}.
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-color, #e5e7eb)' }}>
+                  {stepName}
+                  {isDone && <span className="ms-2" style={{ color: '#22c55e' }}>✓</span>}
+                  {isInProgress && !isDone && (
+                    <span className="ms-2" style={{ color: '#f59e0b' }}>●</span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
+                  {fmtNum(tons)} ton
+                  {dueDate && (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span>({dueDate})</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         );
       })}
     </div>
@@ -222,7 +321,6 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
                 <label className="text-muted small d-block">VNĐ/tấn</label>
                 <span className="fw-semibold">{fmtNum(work.price_per_ton_vnd)}</span>
               </div>
-              {/* ✅ ĐÃ ĐỔI TÊN */}
               <div className="col-md-3">
                 <label className="text-muted small d-block">VNĐ/tấn Standard</label>
                 <span className="fw-semibold">{fmtNum(work.result_cost_per_ton_vnd)}</span>
@@ -290,25 +388,11 @@ export default function WorkDetailModal({ work, onClose }: WorkDetailModalProps)
 
             <hr className="border-secondary" />
 
-            {/* ============ PHẦN 6: LỊCH SỬ DIE ============ */}
-            {work.progress_comment && (
-              <>
-                <h6 className="text-muted text-uppercase small mb-3">
-                  🕓 LỊCH SỬ DIE
-                </h6>
-                <div
-                  className="p-3 rounded"
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    lineHeight: '1.6',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid var(--border-color, #2d3748)',
-                  }}
-                >
-                  {work.progress_comment}
-                </div>
-              </>
-            )}
+            {/* ============ PHẦN 6: LỊCH SỬ DIE (đã sửa) ============ */}
+            <h6 className="text-muted text-uppercase small mb-3">
+              🕓 LỊCH SỬ DIE
+            </h6>
+            <WorkHistoryList workId={work.id} />
 
             {/* ============ PHẦN 7: BÌNH LUẬN QUẢN LÝ ============ */}
             {work.manager_comment && (
