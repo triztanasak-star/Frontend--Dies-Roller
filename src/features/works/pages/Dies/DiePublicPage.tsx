@@ -33,6 +33,106 @@ function fmtDateTime(dateStr?: string | null): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
+// ✅ Helper: Format ngày dạng dd/mm/yyyy (Copy từ WorkDetailModal)
+function fmtDateShort(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// ============================================================
+// ✅ MỚI: Component hiển thị LỊCH SỬ DIE dạng danh sách có STT
+// (Copy từ WorkDetailModal.tsx)
+// ============================================================
+function WorkHistoryList({ workId }: { workId: number }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['task_plans', workId],
+    queryFn: async () => {
+      const res: any = await db.listTaskPlans(workId);
+      return Array.isArray(res) ? res : (res?.documents || res?.data || []);
+    },
+  });
+
+  const plans = (data ?? []).slice().sort((a: any, b: any) => (a.id ?? 0) - (b.id ?? 0));
+
+  if (isLoading) {
+    return <span className="text-muted small">Đang tải lịch sử...</span>;
+  }
+
+  if (plans.length === 0) {
+    return <span className="text-muted small">—</span>;
+  }
+
+  return (
+    <div
+      className="d-flex flex-column gap-2"
+      style={{
+        maxHeight: 320,
+        overflowY: 'auto',
+        paddingRight: 4,
+      }}
+    >
+      {plans.map((p: any, idx: number) => {
+        const stepName = p.step_name || p.name || '(Không tên)';
+        const tons = p.progress_percent ?? p.progress ?? 0;
+        const dueDate = p.due_date ? fmtDateShort(p.due_date) : '';
+        const status = p.status;
+        const isDone = status === 'done' || status === 'Hoàn thành';
+        const isInProgress = status === 'in_progress' || status === 'Đang thực hiện';
+
+        return (
+          <div
+            key={p.id || idx}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--border-color, #2d3748)',
+              fontSize: '0.85rem',
+              lineHeight: 1.5,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: '#94a3b8',
+                  minWidth: 22,
+                  flexShrink: 0,
+                }}
+              >
+                {idx + 1}.
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-color, #e5e7eb)' }}>
+                  {stepName}
+                  {isDone && <span className="ms-2" style={{ color: '#22c55e' }}>✓</span>}
+                  {isInProgress && !isDone && (
+                    <span className="ms-2" style={{ color: '#f59e0b' }}>●</span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: 2 }}>
+                  {fmtNum(tons)} ton
+                  {dueDate && (
+                    <>
+                      <span className="mx-1">·</span>
+                      <span>({dueDate})</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function DiePublicPage() {
   const { id } = useParams<{ id: string }>();
   const workId = Number(id);
@@ -51,7 +151,6 @@ export default function DiePublicPage() {
   // ✅ Style cho wrapper: mobile dùng fixed, desktop giữ nguyên
   const wrapperStyle: React.CSSProperties = isMobile
     ? {
-        // ===== MOBILE: tách hoàn toàn khỏi .app-shell =====
         position: 'fixed',
         inset: 0,
         overflowY: 'auto',
@@ -65,7 +164,6 @@ export default function DiePublicPage() {
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }
     : {
-        // ===== DESKTOP: giữ nguyên như cũ =====
         minHeight: '100vh',
         background: 'var(--card-bg, #0f172a)',
         color: 'var(--text-color, #e5e7eb)',
@@ -151,15 +249,9 @@ export default function DiePublicPage() {
           </>
         )}
 
-        {/* ============ PHẦN 5: LỊCH SỬ DIE ============ */}
-        {work.progress_comment && (
-          <>
-            <SectionTitle title="🕓 LỊCH SỬ DIE" />
-            <div style={boxStyle}>
-              {work.progress_comment}
-            </div>
-          </>
-        )}
+        {/* ============ PHẦN 5: LỊCH SỬ DIE (ĐÃ SỬA) ============ */}
+        <SectionTitle title="🕓 LỊCH SỬ DIE" />
+        <WorkHistoryList workId={work.id} />
 
         {/* ============ PHẦN 6: BÌNH LUẬN QUẢN LÝ ============ */}
         {work.manager_comment && (
