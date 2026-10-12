@@ -55,7 +55,8 @@ function RollerHistoryList({ workId }: { workId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['task_plans', workId, 'roller'],
     queryFn: async () => {
-      const res: any = await db.listTaskPlans(workId, 'roller');
+      // ✅ SỬA: Dùng hàm public (không cần token)
+      const res: any = await db.listTaskPlansPublic(workId, 'roller');
       return Array.isArray(res) ? res : (res?.documents || res?.data || []);
     },
   });

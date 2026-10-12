@@ -291,6 +291,32 @@ export const listTaskPlans = async (workId: number, type: WorkType = 'die') => {
 };
 
 /**
+ * ✅ THÊM MỚI: List task plans cho trang PUBLIC (QR scan) — KHÔNG cần auth
+ * Dùng cho DiePublicPage và RollerPublicPage
+ */
+export const listTaskPlansPublic = async (workId: number, type: WorkType = 'die') => {
+  // ✅ Gọi trực tiếp fetch, KHÔNG qua axios client (tránh gửi token)
+  const API_URL = import.meta.env.VITE_API_URL || '';
+  const url = `${API_URL}/api/works/${workId}/plans/public?type=${type}`;
+  
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    // Không gửi Authorization header
+  });
+  
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+  
+  const data = await res.json();
+  if (Array.isArray(data)) {
+    return { documents: data };
+  }
+  return data as { documents: TaskPlan[] };
+};
+
+/**
  * ✅ SỬA: Thêm param `type` để tạo plan cho Roller
  */
 export const createTaskPlan = async (

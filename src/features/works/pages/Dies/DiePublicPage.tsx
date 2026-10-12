@@ -48,7 +48,8 @@ function WorkHistoryList({ workId }: { workId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['task_plans', workId],
     queryFn: async () => {
-      const res: any = await db.listTaskPlans(workId);
+      // ✅ SỬA: Dùng hàm public (không cần token)
+      const res: any = await db.listTaskPlansPublic(workId, 'die');
       return Array.isArray(res) ? res : (res?.documents || res?.data || []);
     },
   });
