@@ -14,8 +14,9 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-// ✅ Helper: kiểm tra mobile (chạy 1 lần khi render)
-const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+// ✅ SỬA: Chỉ coi là mobile nếu là thiết bị di động thực sự (User Agent)
+// Không dùng window.innerWidth vì desktop có thể thu nhỏ cửa sổ -> bị nhầm thành mobile -> không cuộn được
+const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
@@ -33,7 +34,7 @@ function fmtDateTime(dateStr?: string | null): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-// ✅ Helper: Format ngày dạng dd/mm/yyyy (Copy từ WorkDetailModal)
+// ✅ Helper: Format ngày dạng dd/mm/yyyy
 function fmtDateShort(dateStr?: string | null): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -45,8 +46,7 @@ function fmtDateShort(dateStr?: string | null): string {
 }
 
 // ============================================================
-// ✅ MỚI: Component hiển thị LỊCH SỬ DIE dạng danh sách có STT
-// (Copy từ WorkDetailModal.tsx)
+// ✅ Component hiển thị LỊCH SỬ DIE dạng danh sách có STT
 // ============================================================
 function WorkHistoryList({ workId }: { workId: number }) {
   const { data, isLoading } = useQuery({
@@ -148,9 +148,10 @@ export default function DiePublicPage() {
 
   const work = data;
 
-  // ✅ Style cho wrapper: mobile dùng fixed, desktop giữ nguyên
+  // ✅ Style cho wrapper: Đảm bảo luôn cuộn được trên mọi thiết bị
   const wrapperStyle: React.CSSProperties = isMobile
     ? {
+        // ===== MOBILE: tách hoàn toàn khỏi .app-shell =====
         position: 'fixed',
         inset: 0,
         overflowY: 'auto',
@@ -164,11 +165,13 @@ export default function DiePublicPage() {
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }
     : {
+        // ===== DESKTOP: giữ nguyên nhưng thêm overflowY =====
         minHeight: '100vh',
         background: 'var(--card-bg, #0f172a)',
         color: 'var(--text-color, #e5e7eb)',
         padding: '24px 16px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
+        overflowY: 'auto', // ✅ Thêm để chắc chắn cuộn được
       };
 
   return (
@@ -249,7 +252,7 @@ export default function DiePublicPage() {
           </>
         )}
 
-        {/* ============ PHẦN 5: LỊCH SỬ DIE (ĐÃ SỬA) ============ */}
+        {/* ============ PHẦN 5: LỊCH SỬ DIE ============ */}
         <SectionTitle title="🕓 LỊCH SỬ DIE" />
         <WorkHistoryList workId={work.id} />
 

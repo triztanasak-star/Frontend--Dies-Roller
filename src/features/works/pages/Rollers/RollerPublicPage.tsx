@@ -14,8 +14,8 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-// ✅ Helper: kiểm tra mobile
-const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+// ✅ SỬA: Chỉ coi là mobile nếu là thiết bị di động thực sự (User Agent)
+const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
@@ -40,7 +40,7 @@ function fmtDate(dateStr?: string | null): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-// ✅ Helper: Format ngày dạng dd/mm/yyyy (Copy từ RollerWorkDetailModal)
+// ✅ Helper: Format ngày dạng dd/mm/yyyy
 function fmtDateShort(dateStr?: string | null): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -52,12 +52,10 @@ function fmtDateShort(dateStr?: string | null): string {
 }
 
 // ============================================================
-// ✅ MỚI: Component hiển thị LỊCH SỬ ROLLER dạng danh sách có STT
-// (Copy từ RollerWorkDetailModal.tsx)
+// ✅ Component hiển thị LỊCH SỬ ROLLER dạng danh sách có STT
 // ============================================================
 function RollerHistoryList({ workId }: { workId: number }) {
   const { data, isLoading } = useQuery({
-    // ✅ QueryKey riêng cho roller + truyền 'roller' vào listTaskPlans
     queryKey: ['task_plans', workId, 'roller'],
     queryFn: async () => {
       const res: any = await db.listTaskPlans(workId, 'roller');
@@ -156,7 +154,7 @@ export default function RollerPublicPage() {
 
   const work = data;
 
-  // ✅ Style cho wrapper: mobile dùng fixed, desktop giữ nguyên
+  // ✅ Style cho wrapper: Đảm bảo luôn cuộn được trên mọi thiết bị
   const wrapperStyle: React.CSSProperties = isMobile
     ? {
         // ===== MOBILE: tách hoàn toàn khỏi .app-shell =====
@@ -173,12 +171,13 @@ export default function RollerPublicPage() {
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }
     : {
-        // ===== DESKTOP: giữ nguyên như cũ =====
+        // ===== DESKTOP: giữ nguyên nhưng thêm overflowY =====
         minHeight: '100vh',
         background: 'var(--card-bg, #0f172a)',
         color: 'var(--text-color, #e5e7eb)',
         padding: '24px 16px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
+        overflowY: 'auto', // ✅ Thêm để chắc chắn cuộn được
       };
 
   return (
@@ -258,7 +257,7 @@ export default function RollerPublicPage() {
           </>
         )}
 
-        {/* ============ PHẦN 5: LỊCH SỬ ROLLER (ĐÃ SỬA) ============ */}
+        {/* ============ PHẦN 5: LỊCH SỬ ROLLER ============ */}
         <SectionTitle title="🕓 LỊCH SỬ ROLLER" />
         <RollerHistoryList workId={work.id} />
 
@@ -286,7 +285,7 @@ export default function RollerPublicPage() {
   );
 }
 
-// ... (Các component SectionTitle, InfoCard, gridStyle, boxStyle giữ nguyên như cũ)
+// ... (Các component SectionTitle, InfoCard, gridStyle, boxStyle giữ nguyên)
 const gridStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
