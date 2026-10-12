@@ -296,7 +296,7 @@ export const listTaskPlans = async (workId: number, type: WorkType = 'die') => {
  */
 export const listTaskPlansPublic = async (workId: number, type: WorkType = 'die') => {
   // ✅ Gọi trực tiếp fetch, KHÔNG qua axios client (tránh gửi token)
-  const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '';
   const url = `${API_URL}/api/works/${workId}/plans/public?type=${type}`;
   
   const res = await fetch(url, {
