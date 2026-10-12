@@ -14,10 +14,6 @@ const STATUS_LABELS: Record<number, string> = {
   6: 'Đang đặt',
 };
 
-// ✅ SỬA: Chỉ coi là mobile nếu là thiết bị di động thực sự (User Agent)
-// Không dùng window.innerWidth vì desktop có thể thu nhỏ cửa sổ -> bị nhầm thành mobile -> không cuộn được
-const isMobile = typeof navigator !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
 function fmtNum(v: number | string | null | undefined): string {
   if (v === null || v === undefined || v === '') return '—';
   const n = Number(v);
@@ -148,31 +144,18 @@ export default function DiePublicPage() {
 
   const work = data;
 
-  // ✅ Style cho wrapper: Đảm bảo luôn cuộn được trên mọi thiết bị
-  const wrapperStyle: React.CSSProperties = isMobile
-    ? {
-        // ===== MOBILE: tách hoàn toàn khỏi .app-shell =====
-        position: 'fixed',
-        inset: 0,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-        touchAction: 'pan-y',
-        background: 'var(--card-bg, #0f172a)',
-        color: 'var(--text-color, #e5e7eb)',
-        padding: '24px 16px',
-        paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      }
-    : {
-        // ===== DESKTOP: giữ nguyên nhưng thêm overflowY =====
-        minHeight: '100vh',
-        background: 'var(--card-bg, #0f172a)',
-        color: 'var(--text-color, #e5e7eb)',
-        padding: '24px 16px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        overflowY: 'auto', // ✅ Thêm để chắc chắn cuộn được
-      };
+  // ✅ SỬA TRIỆT ĐỂ: Dùng 1 style duy nhất cho cả mobile và desktop
+  // Đảm bảo overflowY: 'auto' để cuộn được trên mọi thiết bị
+  const wrapperStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    background: 'var(--card-bg, #0f172a)',
+    color: 'var(--text-color, #e5e7eb)',
+    padding: '24px 16px',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    touchAction: 'pan-y',
+  };
 
   return (
     <div style={wrapperStyle}>
