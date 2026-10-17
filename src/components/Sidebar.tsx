@@ -12,6 +12,7 @@ import {
   FiDisc,
   FiBarChart2,
   FiSliders,
+  FiArchive,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -103,6 +104,25 @@ export default function Sidebar() {
 
           <div className="nav-section-label">{t('sidebar.admin')}</div>
           <nav className="nav flex-column">
+            {can('admin') && (
+              <NavLink
+                to="/retired-dies"
+                className="nav-link d-flex align-items-center gap-2 px-3 py-2"
+                onClick={closeSidebar}
+              >
+                <FiArchive /> Dies hết tuổi thọ / hư bể
+              </NavLink>
+            )}
+            {can('admin') && (
+              <NavLink
+                to="/retired-rollers"
+                className="nav-link d-flex align-items-center gap-2 px-3 py-2"
+                onClick={closeSidebar}
+              >
+                <FiArchive /> Rollers hết tuổi thọ / hư bể
+              </NavLink>
+            )}
+
             {can('admin') && (
               <NavLink
                 to="/users"

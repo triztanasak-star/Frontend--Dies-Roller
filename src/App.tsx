@@ -71,10 +71,26 @@ export default function App() {
                 <Route path="projects" element={<ProjectsPage />} />
 
                 {/* ✅ Die route */}
-                <Route path="works" element={<WorksPage />} />
+                <Route path="works" element={<WorksPage key="active-dies" />} />
+                <Route
+                  path="retired-dies"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <WorksPage key="retired-dies" retired />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* ✅ Roller route */}
-                <Route path="roller-works" element={<RollerWorksPage />} />
+                <Route path="roller-works" element={<RollerWorksPage key="active-rollers" />} />
+                <Route
+                  path="retired-rollers"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <RollerWorksPage key="retired-rollers" retired />
+                    </ProtectedRoute>
+                  }
+                />
 
                 <Route path="finance" element={<FinancePage />} />
 

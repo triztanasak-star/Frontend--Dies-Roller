@@ -26,10 +26,10 @@ const STATUS_OPTIONS = [
   'Đang sử dụng',
   'Chờ mài',
   'Chờ sử dụng',
-  'Hết tuổi thọ',
-  'Hư bể',
   'Đang đặt',
 ];
+
+const RETIRED_STATUS_OPTIONS = ['Hết tuổi thọ', 'Hư bể'];
 
 const STATUS_LABELS: Record<number, string> = {
   0: 'Trong kho',
@@ -246,7 +246,7 @@ function MultiSelectFilter({
   );
 }
 
-export default function WorksPage() {
+export default function WorksPage({ retired = false }: { retired?: boolean }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user, can } = useAuth();
@@ -283,7 +283,13 @@ export default function WorksPage() {
   const formModalRef = useRef<WorkFormModalHandle>(null);
   const progressModalRef = useRef<ProgressUpdateModalHandle>(null);
 
-  const works = useMemo(() => data?.documents ?? [], [data]);
+  const works = useMemo(
+    () => (data?.documents ?? []).filter((work) => {
+      const isRetired = Number(work.status) === 4 || Number(work.status) === 5;
+      return retired ? isRetired : !isRetired;
+    }),
+    [data, retired]
+  );
 
   const yearOptions = useMemo(() => {
     const yearsSet = new Set<number>();
@@ -575,15 +581,15 @@ export default function WorksPage() {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div className="page-header" style={{ flexShrink: 0 }}>
         <div>
-          <h1 className="h4">Quản lý Dies</h1>
+          <h1 className="h4">{retired ? 'Dies hết tuổi thọ / hư bể' : 'Quản lý Dies'}</h1>
         </div>
         <div className="d-flex gap-2">
           <button type="button" className="btn btn-outline-primary" onClick={handleExport}>
             <FiDownload className="me-1" /> {t('works.exportExcel')}
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => formModalRef.current?.openCreate()}>
+          {!retired && <button type="button" className="btn btn-primary" onClick={() => formModalRef.current?.openCreate()}>
             <FiPlus className="me-1" /> Thêm Die
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -613,7 +619,7 @@ export default function WorksPage() {
               onChange={setFPressLength}
             />
             <MultiSelectFilter label="Tất cả LINE" options={LINE_OPTIONS} selected={fLine} onChange={setFLine} />
-            <MultiSelectFilter label="Tất cả Status" options={STATUS_OPTIONS} selected={fStatus} onChange={setFStatus} />
+            <MultiSelectFilter label="Tất cả Status" options={retired ? RETIRED_STATUS_OPTIONS : STATUS_OPTIONS} selected={fStatus} onChange={setFStatus} />
 
             <MultiSelectFilter
               label="Tất cả năm"
@@ -628,7 +634,7 @@ export default function WorksPage() {
               </button>
             )}
 
-            <div
+            {!retired && <div
               style={{
                 marginLeft: 'auto',
                 display: 'flex',
@@ -736,7 +742,7 @@ export default function WorksPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div>}
           </div>
 
           {filtered.length === 0 && <EmptyState message={t('works.noMatch')} />}
