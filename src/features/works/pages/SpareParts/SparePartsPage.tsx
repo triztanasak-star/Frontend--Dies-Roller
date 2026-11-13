@@ -183,15 +183,14 @@ export default function SparePartsPage() {
           ['stock_quantity', 'Số lượng tồn', stockQuantities, setStockQuantities],
           ['in_use_quantity', 'Số lượng đang sử dụng', inUseQuantities, setInUseQuantities],
         ] as const).map(([key, label, selected, setSelected]) => <details className="spare-quantity-filter" key={key}>
-          <summary className="form-select w-auto">{label}{selected.length ? `: ${selected.join(', ')}` : ': Tất cả'}</summary>
+          <summary className="form-select w-auto" aria-label={`Lọc ${label.toLowerCase()}`} title={label}>{label}: {selected.length ? `${selected.length} đã chọn` : 'Tất cả'}</summary>
           <div className="spare-quantity-options" role="group" aria-label={`Lọc ${label.toLowerCase()}`}>
-            <label className="d-flex align-items-center gap-2"><input type="checkbox" checked={selected.length === 0} onChange={() => setSelected([])} />Tất cả</label>
+            <button type="button" className="btn btn-link spare-quantity-clear" onClick={() => setSelected([])}>× Bỏ chọn tất cả</button>
             {[...new Set(records.map(p => Number(p[key])))].sort((a, b) => a - b).map(value => <label className="d-flex align-items-center gap-2" key={value}>
               <input type="checkbox" checked={selected.includes(value)} onChange={e => setSelected(current => e.target.checked ? [...current, value].sort((a, b) => a - b) : current.filter(v => v !== value))} />{value.toLocaleString('vi-VN')}
             </label>)}
           </div>
         </details>)}
-        {(search || system || line || equipment || supplier || year || stockQuantities.length > 0 || inUseQuantities.length > 0) && <button className="btn btn-outline-secondary btn-sm" onClick={() => { setSearch(''); setSystem(''); setLine(''); setEquipment(''); setSupplier(''); setYear(''); setStockQuantities([]); setInUseQuantities([]); }}>Xóa lọc</button>}
       </div>
       {query.isPending ? <div className="p-4 text-center" role="status">Đang tải dữ liệu…</div> : query.isError ? <div className="p-4 text-center" role="alert">Không thể tải phụ tùng. <button className="btn btn-link" onClick={() => query.refetch()}>Thử lại</button></div> : <>
         <div className="table-responsive-wrap" style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
