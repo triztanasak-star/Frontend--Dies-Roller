@@ -1,0 +1,36 @@
+/* Keep QR pages readable independently of the management dashboard theme. */
+.spare-part-public {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  background: #f1f5f9;
+  color: #0f172a;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  padding: 20px 12px;
+}
+.spare-part-public-content { max-width: 720px; margin: 0 auto; padding-bottom: 40px; }
+.spare-part-public h1 { color: #0f172a; font-size: 22px; }
+.spare-part-public header h2 { color: #fff; }
+.spare-part-public-card { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.spare-part-public-card h2 { color: #0f172a; font-size: 19px; font-weight: 700; margin-bottom: 16px; }
+.spare-part-public-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.spare-part-public-field { min-width: 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }
+.spare-part-public-wide { grid-column: 1 / -1; }
+.spare-part-public-label { color: #475569; font-size: 14px; margin-bottom: 4px; }
+.spare-part-public-value { color: #0f172a; font-size: 16px; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.spare-part-public .text-muted { color: #475569 !important; opacity: 1; }
+.spare-part-public .spare-part-history { max-height: none; color: #0f172a; }
+.spare-part-public .spare-part-history > div { padding: 10px 0; border-bottom: 1px solid #e2e8f0; overflow-wrap: anywhere; }
+.spare-part-public .modal-content { background: #fff; color: #0f172a; }
+.spare-part-public .modal-title { color: #0f172a; }
+.spare-part-public .btn-close { filter: none; }
+@media (max-width: 360px) {
+  .spare-part-public-fields { grid-template-columns: minmax(0, 1fr); }
+}

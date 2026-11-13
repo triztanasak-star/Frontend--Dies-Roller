@@ -12,6 +12,7 @@ const STATUS_LABELS: Record<number, string> = {
   4: 'Hết tuổi thọ',
   5: 'Hư bể',
   6: 'Đang đặt',
+  7: 'Chờ đặt hàng',
 };
 
 function fmtNum(v: number | string | null | undefined): string {

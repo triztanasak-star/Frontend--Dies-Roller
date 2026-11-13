@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
 } from 'recharts';
 import * as db from '../../../lib/db';
@@ -28,6 +28,7 @@ const STATUS_LABELS: Record<number, string> = {
   4: 'Hết tuổi thọ',
   5: 'Hư bể',
   6: 'Đang đặt',
+  7: 'Chờ đặt hàng',
 };
 
 const STATUS_COLORS: Record<number, string> = {
@@ -38,6 +39,7 @@ const STATUS_COLORS: Record<number, string> = {
   4: '#ef4444',
   5: '#dc2626',
   6: '#0ea5e9',
+  7: '#a855f7',
 };
 
 const MODEL_ORDER = ['CPM 7726SW', 'PM 717-TW', 'CPM 7730SW'];
@@ -268,7 +270,7 @@ export default function DashboardPage() {
     // ✅ Line -> Set các Model đang dùng
     const byLineModels: Record<string, Set<string>> = {};
     const bySupplier: Record<string, number> = {};
-    const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
 
     const lowLifeDanger: DigitalWork[] = [];
 
@@ -315,7 +317,8 @@ export default function DashboardPage() {
           if (!byLineHole[l]) byLineHole[l] = {};
           byLineHole[l][holeStr] = (byLineHole[l][holeStr] ?? 0) + 1;
           if (!byLineModelPressHole[l]) byLineModelPressHole[l] = {};
-          const key = `${modelStr}|${pressStr}|${holeStr}`;
+          const ldRatio = w.ld_ratio != null ? String(Number(w.ld_ratio)) : '—';
+          const key = JSON.stringify([modelStr, pressStr, holeStr, ldRatio]);
           byLineModelPressHole[l][key] = (byLineModelPressHole[l][key] ?? 0) + 1;
           // ✅ Ghi nhận Model vào Line
           if (!byLineModels[l]) byLineModels[l] = new Set();
@@ -389,8 +392,8 @@ export default function DashboardPage() {
     const known = LINE_ORDER.filter((l) => stats.byLine[l] != null);
     return known.map((l) => {
       const details = Object.entries(stats.byLineModelPressHole[l] ?? {}).map(([key, count]) => {
-        const [model, pressLength, hole] = key.split('|');
-        return { model, pressLength, hole, count };
+        const [model, pressLength, hole, ldRatio] = JSON.parse(key) as string[];
+        return { model, pressLength, hole, ldRatio, count };
       });
       details.sort((a, b) => {
         const modelIdxA = MODEL_ORDER.indexOf(a.model);
@@ -697,7 +700,7 @@ export default function DashboardPage() {
                                 <div style={{ fontWeight: 600, marginBottom: 4 }}>Chi tiết:</div>
                                 {data.details.map((d: any, idx: number) => (
                                   <div key={idx} style={{ fontSize: 11, marginBottom: 3 }}>
-                                    • <strong>{d.model}</strong> - Press Length <strong>{d.pressLength}</strong> - Die Hole <strong>{d.hole}</strong>: {d.count} cái
+                                    • <strong>{d.model}</strong> - Press Length <strong>{d.pressLength}</strong> - Die Hole <strong>{d.hole}</strong> - L/D ratio <strong>{d.ldRatio}</strong>: {d.count} cái
                                   </div>
                                 ))}
                               </div>
@@ -840,7 +843,7 @@ export default function DashboardPage() {
 
         <div className="col-12 col-lg-5">
           <ChartCard title="📊 Phân bố theo trạng thái" height={280}>
-            {statusChartData.length === 0 ? (
+            {stats.total === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -860,6 +863,16 @@ export default function DashboardPage() {
                     ))}
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} />
+                  <Legend content={() => (
+                    <div className="d-flex flex-wrap justify-content-center gap-2" style={{ fontSize: 12 }}>
+                      {Object.entries(STATUS_LABELS).map(([status, label]) => (
+                        <span key={status} className="d-inline-flex align-items-center gap-1">
+                          <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 2, background: STATUS_COLORS[Number(status)], display: 'inline-block' }} />
+                          {label}: {stats.byStatus[Number(status)] ?? 0}
+                        </span>
+                      ))}
+                    </div>
+                  )} />
                 </PieChart>
               </ResponsiveContainer>
             )}

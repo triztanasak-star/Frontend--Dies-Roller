@@ -219,7 +219,8 @@ const STATUS_OPTIONS = [
   'Chờ sử dụng',
   'Hết tuổi thọ',
   'Hư bể',
-  'Đang đặt'
+  'Đang đặt',
+  'Chờ đặt hàng'
 ];
 
 // ✅ MAP status string → số để lưu DB (GIỮ NGUYÊN)
@@ -231,6 +232,7 @@ const STATUS_MAP: Record<string, number> = {
   'Hết tuổi thọ': 4,
   'Hư bể': 5,
   'Đang đặt': 6,
+  'Chờ đặt hàng': 7,
 };
 
 const FACTORY_OPTIONS = [
@@ -291,6 +293,7 @@ const RollerWorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onS
           : work.status === 4 ? 'Hết tuổi thọ'
           : work.status === 5 ? 'Hư bể'
           : work.status === 6 ? 'Đang đặt'
+          : work.status === 7 ? 'Chờ đặt hàng'
           : 'Trong kho',
 
         remaining_tons: work.remaining_tons != null ? String(work.remaining_tons) : '',
@@ -336,6 +339,7 @@ const RollerWorkFormModal = forwardRef<WorkFormModalHandle, Props>(({ users, onS
           : work.status === 4 ? 'Hết tuổi thọ'
           : work.status === 5 ? 'Hư bể'
           : work.status === 6 ? 'Đang đặt'
+          : work.status === 7 ? 'Chờ đặt hàng'
           : 'Trong kho',
 
         remaining_tons: work.remaining_tons != null ? String(work.remaining_tons) : '',

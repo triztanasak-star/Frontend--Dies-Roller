@@ -484,6 +484,7 @@ const ProgressUpdateModal = forwardRef<ProgressUpdateModalHandle, ProgressUpdate
                       <option value={4}>Hết tuổi thọ</option>
                       <option value={5}>Hư bể</option>
                       <option value={6}>Đang đặt</option>
+                      <option value={7}>Chờ đặt hàng</option>
                     </select>
                   </div>
 

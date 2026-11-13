@@ -13,6 +13,7 @@ import {
   FiBarChart2,
   FiSliders,
   FiArchive,
+  FiTool,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -99,6 +100,13 @@ export default function Sidebar() {
               onClick={closeSidebar}
             >
               <FiDisc /> Quản lý Roller
+            </NavLink>
+            <NavLink
+              to="/spare-parts"
+              className="nav-link d-flex align-items-center gap-2 px-3 py-2"
+              onClick={closeSidebar}
+            >
+              <FiTool /> Quản lý phụ tùng
             </NavLink>
           </nav>
 

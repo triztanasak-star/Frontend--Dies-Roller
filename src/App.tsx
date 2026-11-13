@@ -30,6 +30,8 @@ import DiePublicPage from './features/works/pages/Dies/DiePublicPage';
 // ✅ Roller pages
 import RollerWorksPage from './features/works/pages/Rollers/RollerWorksPage';
 import RollerPublicPage from './features/works/pages/Rollers/RollerPublicPage';
+import SparePartsPage from './features/works/pages/SpareParts/SparePartsPage';
+import SparePartPublicPage from './features/works/pages/SpareParts/SparePartPublicPage';
 
 import './lib/adapters/nodeAdapter';
 import './lib/db';
@@ -51,6 +53,7 @@ export default function App() {
               {/* ✅ ROUTE PUBLIC — Quét QR mở trang này, KHÔNG cần login */}
               <Route path="/die/:id" element={<DiePublicPage />} />
               <Route path="/roller/:id" element={<RollerPublicPage />} />
+              <Route path="/spare-part/:id" element={<SparePartPublicPage />} />
 
               <Route
                 path="/"
@@ -83,6 +86,7 @@ export default function App() {
 
                 {/* ✅ Roller route */}
                 <Route path="roller-works" element={<RollerWorksPage key="active-rollers" />} />
+                <Route path="spare-parts" element={<SparePartsPage />} />
                 <Route
                   path="retired-rollers"
                   element={

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList,
 } from 'recharts';
 import * as db from '../../../lib/db';
@@ -29,6 +29,7 @@ const STATUS_LABELS: Record<number, string> = {
   4: 'Hết tuổi thọ',
   5: 'Hư bể',
   6: 'Đang đặt',
+  7: 'Chờ đặt hàng',
 };
 
 const STATUS_COLORS: Record<number, string> = {
@@ -39,6 +40,7 @@ const STATUS_COLORS: Record<number, string> = {
   4: '#ef4444',
   5: '#dc2626',
   6: '#0ea5e9',
+  7: '#a855f7',
 };
 
 // Model Roller
@@ -175,7 +177,7 @@ export default function DashboardPage1() {
     const byShellType: Record<string, number> = {};
     const byLine: Record<string, number> = {};
     const bySupplier: Record<string, number> = {};
-    const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const byStatus: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
 
     const lowLifeDanger: DigitalWork[] = [];
 
@@ -577,7 +579,7 @@ export default function DashboardPage1() {
         {/* Cột 3: Status */}
         <div className="col-12 col-lg-4">
           <ChartCard title="📊 Phân bố theo trạng thái" height={320}>
-            {statusChartData.length === 0 ? (
+            {stats.total === 0 ? (
               <EmptyChart />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -597,6 +599,16 @@ export default function DashboardPage1() {
                     ))}
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} />
+                  <Legend content={() => (
+                    <div className="d-flex flex-wrap justify-content-center gap-2" style={{ fontSize: 12 }}>
+                      {Object.entries(STATUS_LABELS).map(([status, label]) => (
+                        <span key={status} className="d-inline-flex align-items-center gap-1">
+                          <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 2, background: STATUS_COLORS[Number(status)], display: 'inline-block' }} />
+                          {label}: {stats.byStatus[Number(status)] ?? 0}
+                        </span>
+                      ))}
+                    </div>
+                  )} />
                 </PieChart>
               </ResponsiveContainer>
             )}

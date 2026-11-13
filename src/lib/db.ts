@@ -275,6 +275,14 @@ export const getWorkPublic = async (id: number, type: WorkType = 'die') => {
   return res.data as DigitalWork;
 };
 
+export const getSparePartPublic = async (id: number) => {
+  const res = await client.get(`/api/spare-parts/${id}/public`, import.meta.env.DEV ? { baseURL: '' } : undefined);
+  if (!res.data || typeof res.data !== 'object' || !res.data.id) {
+    throw new Error('Máy chủ chưa trả về thông tin phụ tùng. Vui lòng kiểm tra phiên bản backend.');
+  }
+  return res.data as import('../features/works/pages/SpareParts/SparePartsPage').Part;
+};
+
 // ============================================================
 // --- Task Plans ---
 // ============================================================
