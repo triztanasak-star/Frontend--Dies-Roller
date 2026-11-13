@@ -1,5 +1,10 @@
 .spare-parts-page .page-header { flex-shrink: 0; }
 .spare-parts-page .data-table-toolbar { flex-shrink: 0; padding: 12px 16px !important; gap: 10px !important; }
+.spare-quantity-filter { position: relative; }
+.spare-quantity-filter summary { cursor: pointer; list-style: none; }
+.spare-quantity-filter summary::-webkit-details-marker { display: none; }
+.spare-quantity-options { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; min-width: 100%; width: max-content; max-height: 240px; overflow-y: auto; padding: 12px; border: 1px solid var(--bs-border-color, #64748b); border-radius: 8px; background: var(--card-bg, var(--bs-body-bg, #fff)); color: var(--bs-body-color, inherit); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+.spare-quantity-options label { padding: 4px 0; cursor: pointer; }
 .spare-parts-page .table th,
 .spare-parts-page .table td { text-align: center; vertical-align: middle; padding: 8px 6px; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
 .spare-part-modal .modal-dialog { margin-top: 1.75rem; }

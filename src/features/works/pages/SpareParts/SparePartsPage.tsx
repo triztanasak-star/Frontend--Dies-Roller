@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { isAxiosError } from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiDownload, FiPlus, FiTrash2, FiEye, FiEdit2, FiImage } from 'react-icons/fi';
@@ -33,7 +33,7 @@ const hasNumber = (value: unknown) => value !== '' && value != null && Number.is
 function tableValue(part: Part, key: keyof Part | 'remaining_tons' | 'price_per_ton'): string | number {
   const remaining = Number(part.standard_ton) - Number(part.life_ton);
   if (key === 'remaining_tons') return remaining;
-  if (key === 'price_per_ton') return remaining === 0 ? '—' : Number(part.price_vnd) / remaining;
+  if (key === 'price_per_ton') return Number(part.life_ton) === 0 ? '—' : Number(part.price_vnd) / Number(part.life_ton);
   if (key === 'line_in_use') return part.line_in_use.join(', ');
   if (numeric.includes(key)) return Number(part[key]);
   return String(part[key] ?? '');
@@ -60,6 +60,8 @@ export default function SparePartsPage() {
   const [equipment, setEquipment] = useState('');
   const [supplier, setSupplier] = useState('');
   const [year, setYear] = useState('');
+  const [stockQuantities, setStockQuantities] = useState<number[]>([]);
+  const [inUseQuantities, setInUseQuantities] = useState<number[]>([]);
   const [draft, setDraft] = useState<Part | null>(null);
   const [readOnly, setReadOnly] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -68,6 +70,29 @@ export default function SparePartsPage() {
   const [zoomImage, setZoomImage] = useState<{ src: string; label: string } | null>(null);
   const [qrPart, setQrPart] = useState<Part | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const closeQuantityFilters = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      const target = event.target;
+      toolbarRef.current?.querySelectorAll<HTMLDetailsElement>('.spare-quantity-filter[open]').forEach(filter => {
+        if (!filter.contains(target)) filter.open = false;
+      });
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      toolbarRef.current?.querySelectorAll<HTMLDetailsElement>('.spare-quantity-filter[open]').forEach(filter => {
+        filter.open = false;
+        filter.querySelector<HTMLElement>('summary')?.focus();
+      });
+    };
+    document.addEventListener('pointerdown', closeQuantityFilters);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeQuantityFilters);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
   function showError(text: string) {
     setError(text);
     formRef.current?.querySelector('.modal-body')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -75,10 +100,12 @@ export default function SparePartsPage() {
   const records = query.data ?? [];
   const remainingTons = draft && hasNumber(draft.standard_ton) && hasNumber(draft.life_ton)
     ? Number(draft.standard_ton) - Number(draft.life_ton) : null;
-  const pricePerTon = draft && remainingTons !== null && remainingTons !== 0 && hasNumber(draft.price_vnd)
-    ? Number(draft.price_vnd) / remainingTons : null;
+  const pricePerTon = draft && hasNumber(draft.life_ton) && Number(draft.life_ton) !== 0 && hasNumber(draft.price_vnd)
+    ? Number(draft.price_vnd) / Number(draft.life_ton) : null;
   const filtered = records.filter(p => (!system || p.system === system) && (!equipment || p.equipment === equipment) && (!supplier || p.supplier === supplier) && (!year || String(new Date(p.created_at).getFullYear()) === year)
     && (!line || p.line_in_use.includes(line))
+    && (!stockQuantities.length || stockQuantities.includes(Number(p.stock_quantity)))
+    && (!inUseQuantities.length || inUseQuantities.includes(Number(p.in_use_quantity)))
     && [p.system, p.equipment, p.specifications, p.supplier, p.note].join(' ').toLocaleLowerCase('vi').includes(search.trim().toLocaleLowerCase('vi')));
   const open = (part: Part, view = false) => { setDraft({ ...part, image_after: part.image_after ?? '', execution_plans: (part.execution_plans ?? []).map(p => ({ ...p })) }); setReadOnly(view); setError(''); };
   const update = (key: keyof Part, value: unknown) => setDraft(p => p ? { ...p, [key]: value } : p);
@@ -145,14 +172,26 @@ export default function SparePartsPage() {
     </div>
     {!draft && error && <div className="alert alert-danger" role="alert">{error}</div>}
     <div className="data-table-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-      <div className="data-table-toolbar d-flex flex-wrap gap-2 p-3">
+      <div ref={toolbarRef} className="data-table-toolbar d-flex flex-wrap gap-2 p-3">
         <input className="form-control progress-modal-input" style={{ flex: '1 1 250px' }} aria-label="Tìm phụ tùng" placeholder="Tìm hệ thống, thiết bị, thông số, supplier…" value={search} onChange={e => setSearch(e.target.value)} />
         <select className="form-select w-auto" aria-label="Lọc hệ thống" value={system} onChange={e => setSystem(e.target.value)}><option value="">Tất cả hệ thống</option>{[...new Set(records.map(p => p.system))].sort().map(s => <option key={s}>{s}</option>)}</select>
         <select className="form-select w-auto" aria-label="Lọc Line - Nguyên liệu sử dụng" value={line} onChange={e => setLine(e.target.value)}><option value="">Tất cả Line - Nguyên liệu</option>{lines.map(s => <option key={s}>{s}</option>)}</select>
         <select className="form-select w-auto" aria-label="Lọc thiết bị" value={equipment} onChange={e => setEquipment(e.target.value)}><option value="">Tất cả thiết bị</option>{[...new Set(records.map(p => p.equipment))].sort().map(s => <option key={s}>{s}</option>)}</select>
         <select className="form-select w-auto" aria-label="Lọc supplier" value={supplier} onChange={e => setSupplier(e.target.value)}><option value="">Tất cả Supplier</option>{[...new Set(records.map(p => p.supplier))].filter(Boolean).sort().map(s => <option key={s}>{s}</option>)}</select>
         <select className="form-select w-auto" aria-label="Lọc năm" value={year} onChange={e => setYear(e.target.value)}><option value="">Tất cả năm</option>{[...new Set(records.map(p => String(new Date(p.created_at).getFullYear())))].sort().reverse().map(s => <option key={s}>{s}</option>)}</select>
-        {(search || system || line || equipment || supplier || year) && <button className="btn btn-outline-secondary btn-sm" onClick={() => { setSearch(''); setSystem(''); setLine(''); setEquipment(''); setSupplier(''); setYear(''); }}>Xóa lọc</button>}
+        {([
+          ['stock_quantity', 'Số lượng tồn', stockQuantities, setStockQuantities],
+          ['in_use_quantity', 'Số lượng đang sử dụng', inUseQuantities, setInUseQuantities],
+        ] as const).map(([key, label, selected, setSelected]) => <details className="spare-quantity-filter" key={key}>
+          <summary className="form-select w-auto">{label}{selected.length ? `: ${selected.join(', ')}` : ': Tất cả'}</summary>
+          <div className="spare-quantity-options" role="group" aria-label={`Lọc ${label.toLowerCase()}`}>
+            <label className="d-flex align-items-center gap-2"><input type="checkbox" checked={selected.length === 0} onChange={() => setSelected([])} />Tất cả</label>
+            {[...new Set(records.map(p => Number(p[key])))].sort((a, b) => a - b).map(value => <label className="d-flex align-items-center gap-2" key={value}>
+              <input type="checkbox" checked={selected.includes(value)} onChange={e => setSelected(current => e.target.checked ? [...current, value].sort((a, b) => a - b) : current.filter(v => v !== value))} />{value.toLocaleString('vi-VN')}
+            </label>)}
+          </div>
+        </details>)}
+        {(search || system || line || equipment || supplier || year || stockQuantities.length > 0 || inUseQuantities.length > 0) && <button className="btn btn-outline-secondary btn-sm" onClick={() => { setSearch(''); setSystem(''); setLine(''); setEquipment(''); setSupplier(''); setYear(''); setStockQuantities([]); setInUseQuantities([]); }}>Xóa lọc</button>}
       </div>
       {query.isPending ? <div className="p-4 text-center" role="status">Đang tải dữ liệu…</div> : query.isError ? <div className="p-4 text-center" role="alert">Không thể tải phụ tùng. <button className="btn btn-link" onClick={() => query.refetch()}>Thử lại</button></div> : <>
         <div className="table-responsive-wrap" style={{ overflow: 'auto', flex: 1, minHeight: 0 }}>
@@ -161,7 +200,7 @@ export default function SparePartsPage() {
             <tbody>{filtered.length === 0 ? <tr><td colSpan={tableColumns.length + 3} className="text-center py-5">{records.length ? 'Không có phụ tùng phù hợp với bộ lọc.' : 'Chưa có phụ tùng.'}</td></tr> : filtered.map((part, i) => <tr key={part.id}>
               <td>{i + 1}</td>{tableColumns.map(([key]) => <td key={key} style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', maxWidth: 240 }}>
                 {typeof tableValue(part, key) === 'number' ? <span className={key === 'remaining_tons' && Number(tableValue(part, key)) < 0 ? 'text-danger fw-semibold' : ''}>{Number(tableValue(part, key)).toLocaleString('vi-VN', { maximumFractionDigits: key === 'price_per_ton' ? 2 : 6 })}</span> : tableValue(part, key)}
-              </td>)}<td style={{ textAlign: 'left', fontSize: '0.8rem' }}><PlanHistory plans={part.execution_plans ?? []} /></td><td><div className="d-flex gap-1">
+              </td>)}<td style={{ textAlign: 'left', fontSize: '0.8rem' }}><PlanHistory plans={part.execution_plans ?? []} /></td><td><div className="d-flex justify-content-center align-items-center gap-1">
                 <button className="btn btn-sm btn-link p-0" title="Xem mã QR" aria-label="Xem mã QR" onClick={() => setQrPart(part)}><MdQrCode2 /></button>
                 <button className="btn btn-sm btn-link p-0" title="Xem chi tiết" aria-label="Xem chi tiết" onClick={() => open(part, true)}><FiEye /></button>
                 {part.image_after && <button className="btn btn-sm btn-link p-0" title="Xem hình sau làm mới nhất" aria-label="Xem hình sau làm mới nhất" onClick={() => setZoomImage({ src: part.image_after, label: `Hình sau làm — ${part.equipment}` })}><FiImage /></button>}
@@ -187,7 +226,7 @@ export default function SparePartsPage() {
             <div className="col-md-3">
               <label className="form-label" htmlFor="part-price-per-ton">VNĐ/tấn</label>
               <input id="part-price-per-ton" className="form-control progress-modal-input" readOnly value={pricePerTon !== null && Number.isFinite(pricePerTon) ? pricePerTon.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : '—'} />
-              <small className="text-muted">{remainingTons === 0 ? 'Số tấn còn lại bằng 0, không thể chia.' : 'Price ÷ Số tấn còn lại'}</small>
+              <small className="text-muted">{hasNumber(draft.life_ton) && Number(draft.life_ton) === 0 ? 'Số tấn đã sử dụng bằng 0, không thể chia.' : 'Price ÷ Số tấn đã sử dụng'}</small>
             </div>
             <div className="col-12" />
             </>}<div className={['note', 'image_before'].includes(key) ? 'col-12' : ['system', 'equipment', 'specifications', 'supplier'].includes(key) ? 'col-md-4' : 'col-md-3'} key={key}>
